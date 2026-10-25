@@ -1,5 +1,10 @@
+import { enBuyer } from "./en.buyer";
+import { enSell } from "./en.sell";
+
 /** English dictionary. Keys are the source of truth; `he.ts` must define every key. */
 export const en = {
+  ...enSell,
+  ...enBuyer,
   "brand.name": "Stayield",
   "brand.tagline": "Buy apartments with proven short-term-rental income",
 

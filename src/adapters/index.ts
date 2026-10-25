@@ -44,6 +44,10 @@ export function getPaymentProvider(): PaymentProvider {
       if (!key) throw new Error("PAYMENT_PROVIDER=stripe requires STRIPE_SECRET_KEY");
       r.payment = new StripePaymentProvider(key, process.env.STRIPE_WEBHOOK_SECRET);
     } else {
+      // The mock "pays" with one click, so it must never run in production by accident.
+      if (process.env.NODE_ENV === "production" && process.env.ALLOW_MOCK_PAYMENTS !== "true") {
+        throw new Error("PAYMENT_PROVIDER=mock is not allowed in production (set PAYMENT_PROVIDER=stripe)");
+      }
       r.payment = new MockPaymentProvider();
     }
   }

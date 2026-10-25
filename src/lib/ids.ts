@@ -1,4 +1,4 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 const ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
 
@@ -19,3 +19,6 @@ export function slugify(input: string): string {
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
 }
+
+/** SHA-256 hex of a secret token; only the hash is stored. */
+export const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");

@@ -3,11 +3,34 @@
  * Nothing here comes from a real booking platform.
  */
 import { eq } from "drizzle-orm";
+import sharp from "sharp";
+import { LocalStorage } from "../src/adapters/local/storage";
+import { addPhoto } from "../src/lib/photo-service";
 import { closeDb, getDb, schema } from "../src/db/client";
 import { incomeBand } from "../src/lib/metrics/band";
 import { randomToken } from "../src/lib/ids";
 
 const SELLER_ID = "demo-seller";
+
+const PALETTES = [
+  ["#f4d9b5", "#e8a87c", "#0b1c30"],
+  ["#bfe3f2", "#7fb6d6", "#12304f"],
+  ["#f2c6c0", "#d98880", "#14213a"],
+];
+
+/** A clearly fake illustration (skyline + "Demo photo"), so seeded listings never look like real photos. */
+async function demoImage(paletteIdx: number, variant: number): Promise<Buffer> {
+  const [sky, sun, ink] = PALETTES[paletteIdx % PALETTES.length];
+  const rects = Array.from({ length: 9 }, (_, i) => {
+    const w = 120 + ((i * 53 + variant * 31) % 90);
+    const h = 380 + ((i * 97 + variant * 61) % 420);
+    const x = i * 175 - 20;
+    const windows = Array.from({ length: 8 }, (_, k) => `<rect x="${x + 22 + (k % 2) * 48}" y="${1200 - h + 30 + Math.floor(k / 2) * 80}" width="26" height="34" rx="4" fill="#fff6d6" opacity="0.85"/>`).join("");
+    return `<rect x="${x}" y="${1200 - h}" width="${w}" height="${h}" fill="${ink}" opacity="${0.78 + (i % 3) * 0.08}"/>${windows}`;
+  }).join("");
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1200"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky}"/><stop offset="1" stop-color="${sun}"/></linearGradient></defs><rect width="1600" height="1200" fill="url(#g)"/><circle cx="${300 + variant * 260}" cy="260" r="110" fill="#fff" opacity="0.55"/>${rects}<text x="800" y="1130" font-family="sans-serif" font-size="54" fill="#fff" text-anchor="middle" opacity="0.9">Demo photo ${variant + 1}</text></svg>`;
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
 
 type Demo = {
   slug: string;
@@ -98,7 +121,10 @@ async function main() {
     })
     .onConflictDoNothing();
 
-  // Reseed: remove previous demo properties (cascades to photos, submissions, aggregates).
+  // Reseed: remove previous demo properties (cascades to photos, submissions, aggregates) and their files.
+  const old = await db.select({ id: schema.properties.id }).from(schema.properties).where(eq(schema.properties.isDemo, true));
+  const oldStorage = new LocalStorage(process.env.STORAGE_DIR);
+  for (const o of old) await oldStorage.deletePrefix(`photos/${o.id}`);
   await db.delete(schema.properties).where(eq(schema.properties.isDemo, true));
 
   const now = new Date();
@@ -153,6 +179,17 @@ async function main() {
       .returning();
 
     await db.insert(schema.inboundAddresses).values({ propertyId: prop.id, token: randomToken(10) });
+
+    const storage = new LocalStorage(process.env.STORAGE_DIR);
+    await storage.deletePrefix(`photos/${prop.id}`);
+    for (let v = 0; v < 5; v++) {
+      const res = await addPhoto(db, storage, prop.id, await demoImage(idx, v));
+      if (!res.ok) throw new Error(`demo photo failed: ${res.error}`);
+    }
+    await db
+      .update(schema.propertyPhotos)
+      .set({ alt: `Illustration of a skyline, demo photo for ${d.city}` })
+      .where(eq(schema.propertyPhotos.propertyId, prop.id));
 
     const aggregates = months.map(({ y, m }, i) => {
       const dim = daysIn(y, m);

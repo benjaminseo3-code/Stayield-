@@ -373,6 +373,9 @@ export const verifiedEmails = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     email: text("email").notNull(),
     verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    /** SHA-256 of the emailed verification token (the token itself is never stored). */
+    verifyTokenHash: text("verify_token_hash"),
+    verifyExpiresAt: timestamp("verify_expires_at", { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("verified_emails_user_email_uidx").on(t.userId, t.email)],

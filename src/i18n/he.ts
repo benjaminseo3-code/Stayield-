@@ -1,6 +1,10 @@
 import type { DictKey } from "./en";
+import { heBuyer } from "./he.buyer";
+import { heSell } from "./he.sell";
 
 export const he: Record<DictKey, string> = {
+  ...heSell,
+  ...heBuyer,
   "brand.name": "Stayield",
   "brand.tagline": "קונים דירות עם הכנסה מוכחת מהשכרה לטווח קצר",
 

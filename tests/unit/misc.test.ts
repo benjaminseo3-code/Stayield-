@@ -65,3 +65,13 @@ describe("verifyStripeSignature", () => {
     expect(() => verifyStripeSignature(payload, null, secret, now)).toThrow();
   });
 });
+
+import { safeNext } from "@/lib/safe-next";
+describe("safeNext", () => {
+  it("allows only same-site relative paths", () => {
+    expect(safeNext("/sell/abc?x=1")).toBe("/sell/abc?x=1");
+    for (const bad of ["https://evil.example", "//evil.example", "/\\evil", "javascript:alert(1)", "", null, undefined]) {
+      expect(safeNext(bad as string)).toBe("/");
+    }
+  });
+});

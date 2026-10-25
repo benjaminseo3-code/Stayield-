@@ -26,6 +26,8 @@ export default defineConfig({
       BETTER_AUTH_SECRET: "e2e-secret-e2e-secret-e2e-secret-00",
       INBOUND_WEBHOOK_SECRET: "e2e-webhook-secret",
       ADMIN_EMAILS: "admin@e2e.test",
+      // e2e runs a production build, where the mock payment provider is otherwise refused.
+      ALLOW_MOCK_PAYMENTS: "true",
     },
   },
 });

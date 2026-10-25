@@ -52,7 +52,7 @@ Demo data is synthetic and marked "Demo data".
 | Seller | `seller@stayield.demo` | `Stayield-Demo-2026` |
 | Investor | `buyer@stayield.demo` | `Stayield-Demo-2026` |
 
-The demo investor is verified, approved for the Lisbon listing and pending for Tel Aviv. The demo owner
+The demo investor is verified, approved for the Limassol listing and pending for Tel Aviv. The demo owner
 has incoming requests from Rossi and Levy. An admin account comes from `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 
 ## Checks
@@ -64,6 +64,8 @@ pnpm test:e2e                  # Playwright; needs a build first. Screenshots la
 # Same flows against a deployed URL (creates a few test accounts there):
 E2E_BASE=https://your-app.vercel.app npx playwright test -c playwright.live.config.ts flows.spec.ts
 ```
+
+After a live run, `pnpm db:cleanup-e2e` (with the production `DATABASE_URL`) removes the `@e2e.test` accounts it created.
 
 The live run needs `E2E_ADMIN_EMAIL` / `E2E_ADMIN_PASSWORD` for the admin tour and skips the two tests that depend
 on the local e2e webhook secret and inbound domain.

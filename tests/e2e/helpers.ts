@@ -47,6 +47,7 @@ export async function fillProfile(page: Page, opts: { name?: string } = {}): Pro
   await page.getByTestId("target-CY").check();
   await page.locator("#about").fill("I run two short-term rentals in Tel Aviv and want one more in Southern Europe with verified numbers.");
   await page.getByTestId("profile-submit").click();
+  await page.getByTestId("profile-saved").waitFor(); // navigating away earlier can drop the submit on a slow server
 }
 
 export const jpeg = (w = 1200, h = 800, color = "#336699") => sharp({ create: { width: w, height: h, channels: 3, background: color } }).jpeg().toBuffer();

@@ -256,7 +256,7 @@ test("an owner lists an apartment; it appears blurred to everyone; an investor r
   await own.getByTestId("next-step").click();
   await own.waitForURL(/\/data/);
 
-  await expect(own.getByTestId("inbound-address")).toContainText(/^p-[a-z0-9]+@inbound\.localhost$/);
+  await expect(own.getByTestId("inbound-address")).toContainText(/^p-[a-z0-9]+@inbound\./);
   await own.getByTestId("option-b").click();
   await own.getByTestId("csv-input").setInputFiles({ name: "report.csv", mimeType: "text/csv", buffer: Buffer.from(reportCsv()) });
   await expect(own.getByTestId("csv-summary")).toContainText("64 bookings found");

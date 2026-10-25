@@ -10,6 +10,7 @@ import { auditLog, introRequests, payments, properties, savedProperties } from "
 import { config } from "@/lib/config";
 import { createPendingPayment, settlePayment } from "@/lib/payments";
 import { hasUnlock } from "@/lib/data/report";
+import { enforce } from "@/lib/enforce";
 import { requireUser } from "@/lib/session";
 
 const uuid = z.string().uuid();
@@ -21,6 +22,7 @@ export async function startUnlock(formData: FormData) {
   const [p] = await db.select({ slug: properties.publicSlug }).from(properties).where(eq(properties.id, id.data)).limit(1);
   if (!p) redirect("/properties");
   const user = await requireUser(`/properties/${p.slug}`);
+  enforce(`unlock:${user.id}`, { limit: 10, windowMs: 10 * 60_000 });
 
   const provider = getPaymentProvider();
   const start = await createPendingPayment(db, user, id.data, {
@@ -82,6 +84,7 @@ export async function requestIntro(formData: FormData) {
   const [p] = await db.select({ slug: properties.publicSlug, ownerId: properties.ownerId }).from(properties).where(eq(properties.id, id.data)).limit(1);
   if (!p) return;
   const user = await requireUser(`/properties/${p.slug}`);
+  enforce(`intro:${user.id}`, { limit: 5, windowMs: 3600_000 });
   if (!(await hasUnlock(db, user, id.data))) redirect(`/properties/${p.slug}`);
 
   await db.insert(introRequests).values({ buyerId: user.id, propertyId: id.data, message: message.data });

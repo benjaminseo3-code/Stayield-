@@ -8,6 +8,11 @@ import { requireAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("admin.title") };
+}
+
 export default async function Admin() {
   const { t, lang } = await getT();
   await requireAdmin();
@@ -47,7 +52,7 @@ export default async function Admin() {
         <section className="card card-pad" aria-labelledby="audit-h">
           <h2 id="audit-h" style={{ fontSize: "1.4rem" }}>{t("admin.audit")}</h2>
           {events.length === 0 ? <p className="muted" style={{ margin: 0 }}>{t("admin.audit.empty")}</p> : (
-            <div className="table-wrap">
+            <div className="table-wrap" role="region" tabIndex={0} aria-label={t("admin.audit")}>
               <table className="table">
                 <tbody>
                   {events.map((e) => (

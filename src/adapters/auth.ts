@@ -35,9 +35,13 @@ const adminEmails = () =>
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
 
+/** Rate limiting is always on; only the e2e suite (many sign-ins from one IP) may turn it off. */
+const rateLimitOff = () => process.env.RATE_LIMIT_DISABLED === "true" && process.env.NODE_ENV !== "development";
+
 async function build() {
   const db = await getDb();
   return betterAuth({
+    rateLimit: { enabled: !rateLimitOff(), window: 60, max: 60 },
     secret: authSecret(),
     baseURL: process.env.APP_URL ?? "http://localhost:3000",
     database: drizzleAdapter(db, {
@@ -70,6 +74,8 @@ async function build() {
     plugins: [
       magicLink({
         expiresIn: 60 * 10,
+        // 5 sign-in emails per minute per client; stops mail bombing and token guessing.
+        rateLimit: { window: 60, max: rateLimitOff() ? 10_000 : 5 },
         sendMagicLink: async ({ email, url }) => {
           await getMailer().send({
             to: email,

@@ -69,6 +69,14 @@ export const en = {
   "home.featured.all": "See all",
 
   "demo.banner": "This is demo data created for development.",
+
+  "error.title": "Something went wrong",
+  "error.body": "An unexpected error occurred. Please try again. If it keeps happening, come back in a few minutes.",
+  "error.retry": "Try again",
+  "error.home": "Back to the home page",
+  "error.rate": "Too many requests. Please wait a moment and try again.",
+  "notfound.title": "Page not found",
+  "notfound.body": "The page you are looking for does not exist or is no longer available.",
 } as const;
 
 export type DictKey = keyof typeof en;

@@ -45,7 +45,7 @@ export async function TeaserSection({ p }: { p: Teaser }) {
           <h2 id="income-h" style={{ fontSize: "1.4rem", margin: 0 }}>{t("prop.income.teaser")}</h2>
           {p.incomeBandLowMinor != null && p.incomeBandHighMinor != null ? (
             <p style={{ margin: 0, fontFamily: "var(--font-heading)", fontWeight: 700, fontSize: "1.8rem" }} data-testid="income-band">
-              {t("card.incomeBand", { low: formatMoney(p.incomeBandLowMinor, p.currency, lang, true), high: formatMoney(p.incomeBandHighMinor, p.currency, lang, true) })}
+              <bdi dir="ltr">{t("card.incomeBand", { low: formatMoney(p.incomeBandLowMinor, p.currency, lang, true), high: formatMoney(p.incomeBandHighMinor, p.currency, lang, true) })}</bdi>
             </p>
           ) : (
             <p className="muted" style={{ margin: 0 }}>{t("card.noIncome")}</p>

@@ -10,12 +10,14 @@ import { auditLog, consents, inboundAddresses, properties } from "@/db/schema";
 import { randomToken, slugify } from "@/lib/ids";
 import { evaluatePropertyStatus } from "@/lib/ingest/service";
 import { deleteAllPhotos } from "@/lib/photo-service";
+import { enforce } from "@/lib/enforce";
 import { canSell } from "@/lib/policies";
 import { loadEditableProperty, requireSeller, requireUser } from "@/lib/session";
 
 export async function createListing() {
   const user = await requireSeller("/sell");
   if (!canSell(user)) redirect("/sell");
+  enforce(`new-listing:${user.id}`, { limit: 20, windowMs: 3600_000 });
   const db = await getDb();
   const [p] = await db
     .insert(properties)

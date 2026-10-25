@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { getDb } from "@/db/client";
 import { getInboundProvider, getStorage } from "@/adapters";
 import { ingestInboundEmail } from "@/lib/ingest/service";
+import { clientIp, rateLimit, tooLarge, tooManyRequests } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,13 @@ function secretMatches(given: string | null, expected: string | undefined): bool
 }
 
 export async function POST(req: Request) {
+  // Throttle before any secret comparison so the endpoint cannot be hammered or probed.
+  const rl = rateLimit(`inbound:${clientIp(req.headers)}`, { limit: 120, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(rl.retryAfterSeconds);
   if (!secretMatches(req.headers.get("x-webhook-secret"), process.env.INBOUND_WEBHOOK_SECRET)) {
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
+  if (tooLarge(req, 26 * 1024 * 1024)) return Response.json({ error: "too_large" }, { status: 413 });
   let raw: Buffer;
   try {
     ({ raw } = await getInboundProvider().parseWebhook(req));

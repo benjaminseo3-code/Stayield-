@@ -32,10 +32,13 @@ export async function PropertyCard({ p }: { p: Teaser }) {
           <span className="muted">{t("card.income")}</span>
           {p.incomeBandLowMinor != null && p.incomeBandHighMinor != null ? (
             <strong>
-              {t("card.incomeBand", {
-                low: formatMoney(p.incomeBandLowMinor, p.currency, lang, true),
-                high: formatMoney(p.incomeBandHighMinor, p.currency, lang, true),
-              })}
+              {/* bdi keeps "low – high" in reading order inside right-to-left text */}
+              <bdi dir="ltr">
+                {t("card.incomeBand", {
+                  low: formatMoney(p.incomeBandLowMinor, p.currency, lang, true),
+                  high: formatMoney(p.incomeBandHighMinor, p.currency, lang, true),
+                })}
+              </bdi>
             </strong>
           ) : (
             <strong>{t("card.noIncome")}</strong>

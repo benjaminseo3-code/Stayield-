@@ -51,7 +51,7 @@ export function Gallery({ photos, fallbackAlt }: { photos: G[]; fallbackAlt: str
   return (
     <>
       {/* Desktop mosaic */}
-      <div className="gallery" data-testid="gallery">
+      <div className="gallery" data-testid="gallery" data-count={Math.min(photos.length, 5)}>
         {photos.slice(0, 5).map((p, i) => (
           <button key={p.id} type="button" className={i === 0 ? "g-main" : "g-sub"} onClick={(e) => openAt(i, e.currentTarget)} aria-label={t("prop.gallery.open", { n: i + 1 })}>
             <Img p={p} full={i === 0} />
@@ -62,7 +62,7 @@ export function Gallery({ photos, fallbackAlt }: { photos: G[]; fallbackAlt: str
       <style>{`@media (max-width: 819px){ .gallery{display:none} } @media (min-width: 820px){ .swipe{display:none} }`}</style>
       <div className="swipe" aria-label={fallbackAlt}>
         {photos.map((p, i) => (
-          <button key={p.id} type="button" style={{ all: "unset", cursor: "zoom-in", aspectRatio: "4 / 3", overflow: "hidden", borderRadius: 10, background: "var(--navy)" }} onClick={(e) => openAt(i, e.currentTarget)} aria-label={t("prop.gallery.open", { n: i + 1 })}>
+          <button key={p.id} type="button" style={{ all: "unset", flex: "0 0 92%", scrollSnapAlign: "center", display: "block", cursor: "zoom-in", aspectRatio: "4 / 3", overflow: "hidden", borderRadius: 10, background: "var(--navy)" }} onClick={(e) => openAt(i, e.currentTarget)} aria-label={t("prop.gallery.open", { n: i + 1 })}>
             <picture>
               <source type="image/webp" srcSet={`/api/photos/${p.id}/thumb.webp`} />
               <img src={`/api/photos/${p.id}/full.jpg`} alt={alt(p)} style={{ width: "100%", height: "100%", objectFit: "cover" }} loading={i === 0 ? "eager" : "lazy"} />

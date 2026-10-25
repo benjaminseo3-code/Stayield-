@@ -214,7 +214,7 @@ function CsvUpload({ propertyId, onDone }: { propertyId: string; onDone: () => v
           </p>
           {parsed.ignoredColumns.length > 0 && <p className="small muted" style={{ margin: 0 }}>{t("data.b.ignored", { cols: parsed.ignoredColumns.join(", ") })}</p>}
           <h4 style={{ fontSize: "1rem", margin: "4px 0" }}>{t("data.b.preview")}</h4>
-          <div className="table-wrap">
+          <div className="table-wrap" role="region" tabIndex={0} aria-label={t("data.b.preview")}>
             <table className="table">
               <thead>
                 <tr>

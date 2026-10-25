@@ -1,5 +1,6 @@
 import { getStorage } from "@/adapters";
 import { guardProperty, isResponse } from "@/lib/api-guard";
+import { rateLimit, tooLarge, tooManyRequests } from "@/lib/rate-limit";
 import { addPhoto, reorderPhotos } from "@/lib/photo-service";
 import { MAX_PHOTO_BYTES } from "@/lib/photos";
 
@@ -7,8 +8,12 @@ export const dynamic = "force-dynamic";
 type Ctx = { params: Promise<{ id: string }> };
 
 export async function POST(req: Request, { params }: Ctx) {
+  // Cheap checks first: declared size, then who is asking.
+  if (tooLarge(req, 40 * 1024 * 1024)) return Response.json({ error: "too_large" }, { status: 413 });
   const g = await guardProperty(req, (await params).id, { mutating: true });
   if (isResponse(g)) return g;
+  const rl = rateLimit(`photos:${g.user.id}`, { limit: 90, windowMs: 10 * 60_000 });
+  if (!rl.ok) return tooManyRequests(rl.retryAfterSeconds);
 
   let form: FormData;
   try {

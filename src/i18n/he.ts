@@ -68,4 +68,12 @@ export const he: Record<DictKey, string> = {
   "home.featured.all": "לכל הדירות",
 
   "demo.banner": "אלה נתוני דמו שנוצרו לצורכי פיתוח.",
+
+  "error.title": "משהו השתבש",
+  "error.body": "אירעה שגיאה בלתי צפויה. נסו שוב. אם זה חוזר, חזרו בעוד כמה דקות.",
+  "error.retry": "ניסיון חוזר",
+  "error.home": "חזרה לדף הבית",
+  "error.rate": "יותר מדי בקשות. המתינו רגע ונסו שוב.",
+  "notfound.title": "הדף לא נמצא",
+  "notfound.body": "הדף שחיפשתם לא קיים או שאינו זמין עוד.",
 };

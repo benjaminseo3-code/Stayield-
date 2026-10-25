@@ -10,12 +10,14 @@ import { auditLog, properties, users, verifiedEmails } from "@/db/schema";
 import { config } from "@/lib/config";
 import { deleteAllPhotos } from "@/lib/photo-service";
 import { hashToken, randomToken } from "@/lib/ids";
+import { enforce } from "@/lib/enforce";
 import { requireUser } from "@/lib/session";
 
 const VERIFY_TTL_MS = 24 * 3600_000;
 
 export async function addVerifiedEmail(formData: FormData) {
   const user = await requireUser("/account");
+  enforce(`add-email:${user.id}`, { limit: 5, windowMs: 3600_000 });
   const parsed = z.string().trim().toLowerCase().email().max(254).safeParse(formData.get("email"));
   if (!parsed.success) redirect("/account?emailError=1");
   const email = parsed.data;

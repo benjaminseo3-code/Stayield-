@@ -28,6 +28,8 @@ export default defineConfig({
       ADMIN_EMAILS: "admin@e2e.test",
       // e2e runs a production build, where the mock payment provider is otherwise refused.
       ALLOW_MOCK_PAYMENTS: "true",
+      // The tour signs in dozens of times from one IP, which the sign-in rate limit would (rightly) block.
+      RATE_LIMIT_DISABLED: "true",
     },
   },
 });

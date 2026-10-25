@@ -5,6 +5,11 @@ import { getT } from "@/i18n/server";
 import { listLiveTeasers } from "@/lib/data/teaser";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("props.title") };
+}
 type SP = { city?: string; min?: string; max?: string; beds?: string; trust?: string };
 
 const toMinor = (v?: string) => (v && !Number.isNaN(Number(v)) && Number(v) >= 0 ? Math.round(Number(v) * 100) : undefined);

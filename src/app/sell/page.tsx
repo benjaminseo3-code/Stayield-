@@ -9,6 +9,11 @@ import { currentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("sell.hero.title") };
+}
+
 export default async function Sell() {
   const { t } = await getT();
   const user = await currentUser();

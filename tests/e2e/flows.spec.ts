@@ -230,3 +230,31 @@ test("mutating API routes require same-origin and a session", async ({ request }
   const res = await request.post(`${BASE}/api/properties/00000000-0000-0000-0000-000000000000/csv`, { data: { rows: [] }, headers: { origin: "https://evil.example" } });
   expect(res.status()).toBe(403);
 });
+
+test("security headers are set and the income band keeps reading order in Hebrew", async ({ browser, request }) => {
+  const res = await request.get("/");
+  const h = res.headers();
+  expect(h["x-content-type-options"]).toBe("nosniff");
+  expect(h["x-frame-options"]).toBe("DENY");
+  expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
+  expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
+  expect(h["content-security-policy"]).toContain("object-src 'none'");
+  expect(h["strict-transport-security"]).toContain("max-age=");
+  expect(h["x-powered-by"]).toBeUndefined();
+
+  const ctx = await newContext(browser, { lang: "he" });
+  const page = await ctx.newPage();
+  await page.goto("/properties?city=Lisbon");
+  const band = page.locator(".income-band bdi").first();
+  await expect(band).toHaveAttribute("dir", "ltr");
+  await ctx.close();
+});
+
+test("private pages are not indexable and robots/sitemap exist", async ({ request }) => {
+  const robots = await (await request.get("/robots.txt")).text();
+  expect(robots).toContain("Disallow: /admin");
+  const sitemap = await (await request.get("/sitemap.xml")).text();
+  expect(sitemap).toContain("/properties");
+  const signIn = await (await request.get("/sign-in")).text();
+  expect(signIn).toMatch(/<meta name="robots" content="noindex/);
+});

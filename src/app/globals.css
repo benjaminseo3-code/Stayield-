@@ -141,8 +141,21 @@ svg {
 .section.tight {
   padding-block: 28px;
 }
-.stack > * + * {
-  margin-top: var(--gap, 16px);
+/* Flex gap (not sibling margins) so inline `margin: 0` on children never collapses the rhythm. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap, 16px);
+}
+.stack > * {
+  min-width: 0;
+}
+.stack > .btn {
+  align-self: flex-start;
+}
+.stack.center > .btn,
+.stack.center > form {
+  align-self: center;
 }
 .row {
   display: flex;
@@ -837,12 +850,21 @@ table.table {
   .gallery .g-main {
     aspect-ratio: auto;
   }
-  .gallery .g-sub {
-    display: block;
-  }
 }
-.gallery .g-sub {
-  display: none;
+/* Fewer photos -> fewer columns, so the mosaic never leaves holes. */
+@media (min-width: 820px) {
+  .gallery[data-count="1"] {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr;
+  }
+  .gallery[data-count="2"] {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr;
+  }
+  .gallery[data-count="3"],
+  .gallery[data-count="4"] {
+    grid-template-columns: 2fr 1fr;
+  }
 }
 .swipe {
   display: flex;

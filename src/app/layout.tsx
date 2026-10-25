@@ -27,6 +27,8 @@ export async function generateMetadata(): Promise<Metadata> {
     metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
     title: { default: `${t("brand.name")} — ${t("brand.tagline")}`, template: `%s · ${t("brand.name")}` },
     description: t("home.hero.sub"),
+    openGraph: { type: "website", siteName: "Stayield", title: t("brand.name"), description: t("brand.tagline"), images: [{ url: "/brand/og.png", width: 1200, height: 630 }] },
+    twitter: { card: "summary_large_image" },
   };
 }
 

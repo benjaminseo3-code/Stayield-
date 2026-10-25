@@ -3,6 +3,11 @@ import { signInAction } from "@/app/actions/auth";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("auth.title") };
+}
+
 export default async function SignIn({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
   const { t } = await getT();
   const { next = "/", error } = await searchParams;

@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { completeMockPayment } from "@/app/actions/buyer";
 import { getDb } from "@/db/client";
 import { payments } from "@/db/schema";
@@ -16,7 +16,9 @@ export default async function MockCheckout({ searchParams }: { searchParams: Pro
   if (!payment || !/^[0-9a-f-]{36}$/i.test(payment)) notFound();
   const db = await getDb();
   const [pay] = await db.select().from(payments).where(eq(payments.id, payment)).limit(1);
-  if (!pay || pay.buyerId !== user.id || pay.provider !== "mock" || pay.status !== "pending") notFound();
+  if (!pay || pay.buyerId !== user.id || pay.provider !== "mock") notFound();
+  // Already settled (e.g. the page was refreshed after paying): show the outcome instead of a 404.
+  if (pay.status !== "pending") redirect(`/checkout/result?payment=${pay.id}`);
   const price = formatMoney(pay.amountMinor, pay.currency, lang);
 
   return (

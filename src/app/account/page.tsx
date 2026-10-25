@@ -9,6 +9,11 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("account.title") };
+}
 type SP = { sent?: string; verified?: string; verifyError?: string; emailError?: string; deleted?: string; deleteError?: string };
 
 export default async function Account({ searchParams }: { searchParams: Promise<SP> }) {

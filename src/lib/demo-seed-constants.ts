@@ -1,4 +1,4 @@
-/** Public demo credentials. They only work when DEMO_MODE=true, and only on synthetic data. */
+/** Public demo credentials (synthetic data only). */
 export const DEMO_SELLER_ID = "demo-seller";
 export const DEMO_BUYER_ID = "demo-buyer";
 export const DEMO_PASSWORD = "Stayield-Demo-2026";

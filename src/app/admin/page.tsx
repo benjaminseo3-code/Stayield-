@@ -41,6 +41,7 @@ export default async function Admin() {
       <div className="container stack" style={{ ["--gap" as string]: "24px" }}>
         <h1>{t("admin.title")}</h1>
         <p className="notice small">{t("admin.note")}</p>
+        <p><Link className="btn btn-secondary sm" href="/admin/investors">{t("admin.investors")}</Link></p>
         <section className="card card-pad" aria-labelledby="q-h">
           <h2 id="q-h" style={{ fontSize: "1.4rem" }}>{t("admin.queue")} ({queue.length})</h2>
           {queue.length === 0 ? <p className="muted" style={{ margin: 0 }}>{t("admin.queue.empty")}</p> : <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>{queue.map(row)}</ul>}

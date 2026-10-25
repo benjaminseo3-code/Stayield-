@@ -1,12 +1,180 @@
 {
-  "id": "a1008bae-8b58-45c7-8ab1-a8c899997124",
-  "prevId": "78609916-3b65-4132-a899-276360c0e9b1",
+  "id": "386f5c7c-8162-48c5-aa83-7cffe1aaa213",
+  "prevId": "9b23544f-6521-489c-a2a9-ba4626d74590",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.accounts": {
+    "stayield.access_requests": {
+      "name": "access_requests",
+      "schema": "stayield",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "property_id": {
+          "name": "property_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "investor_id": {
+          "name": "investor_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "access_status",
+          "typeSchema": "stayield",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "seller_unseen": {
+          "name": "seller_unseen",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "investor_unseen": {
+          "name": "investor_unseen",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "access_requests_property_idx": {
+          "name": "access_requests_property_idx",
+          "columns": [
+            {
+              "expression": "property_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "access_requests_investor_idx": {
+          "name": "access_requests_investor_idx",
+          "columns": [
+            {
+              "expression": "investor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        },
+        "access_requests_active_uidx": {
+          "name": "access_requests_active_uidx",
+          "columns": [
+            {
+              "expression": "property_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "investor_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "with": {},
+          "method": "btree",
+          "where": "\"stayield\".\"access_requests\".\"status\" in ('pending', 'info_requested', 'approved')",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "access_requests_property_id_properties_id_fk": {
+          "name": "access_requests_property_id_properties_id_fk",
+          "tableFrom": "access_requests",
+          "columnsFrom": [
+            "property_id"
+          ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "access_requests_investor_id_users_id_fk": {
+          "name": "access_requests_investor_id_users_id_fk",
+          "tableFrom": "access_requests",
+          "columnsFrom": [
+            "investor_id"
+          ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "stayield.accounts": {
       "name": "accounts",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -101,24 +269,25 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "accounts_user_id_users_id_fk": {
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -127,9 +296,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.audit_log": {
+    "stayield.audit_log": {
       "name": "audit_log",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -189,9 +358,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {},
@@ -201,9 +370,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.consents": {
+    "stayield.consents": {
       "name": "consents",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -249,28 +418,30 @@
         "consents_user_id_users_id_fk": {
           "name": "consents_user_id_users_id_fk",
           "tableFrom": "consents",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "consents_property_id_properties_id_fk": {
           "name": "consents_property_id_properties_id_fk",
           "tableFrom": "consents",
-          "tableTo": "properties",
           "columnsFrom": [
             "property_id"
           ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -279,9 +450,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.data_submissions": {
+    "stayield.data_submissions": {
       "name": "data_submissions",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -299,14 +470,14 @@
         "source": {
           "name": "source",
           "type": "submission_source",
-          "typeSchema": "public",
+          "typeSchema": "stayield",
           "primaryKey": false,
           "notNull": true
         },
         "trust_tier": {
           "name": "trust_tier",
           "type": "trust_tier",
-          "typeSchema": "public",
+          "typeSchema": "stayield",
           "primaryKey": false,
           "notNull": true
         },
@@ -338,7 +509,7 @@
         "status": {
           "name": "status",
           "type": "submission_status",
-          "typeSchema": "public",
+          "typeSchema": "stayield",
           "primaryKey": false,
           "notNull": true,
           "default": "'received'"
@@ -363,9 +534,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "submissions_sha_uidx": {
           "name": "submissions_sha_uidx",
@@ -378,25 +549,26 @@
             }
           ],
           "isUnique": true,
-          "where": "\"data_submissions\".\"raw_sha256\" is not null",
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "where": "\"stayield\".\"data_submissions\".\"raw_sha256\" is not null",
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "data_submissions_property_id_properties_id_fk": {
           "name": "data_submissions_property_id_properties_id_fk",
           "tableFrom": "data_submissions",
-          "tableTo": "properties",
           "columnsFrom": [
             "property_id"
           ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -405,9 +577,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.inbound_addresses": {
+    "stayield.inbound_addresses": {
       "name": "inbound_addresses",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -448,63 +620,173 @@
         "inbound_addresses_property_id_properties_id_fk": {
           "name": "inbound_addresses_property_id_properties_id_fk",
           "tableFrom": "inbound_addresses",
-          "tableTo": "properties",
           "columnsFrom": [
             "property_id"
           ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "inbound_addresses_token_unique": {
           "name": "inbound_addresses_token_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "token"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.intro_requests": {
-      "name": "intro_requests",
-      "schema": "",
+    "stayield.investor_profiles": {
+      "name": "investor_profiles",
+      "schema": "stayield",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "buyer_id": {
-          "name": "buyer_id",
+        "user_id": {
+          "name": "user_id",
           "type": "text",
-          "primaryKey": false,
+          "primaryKey": true,
           "notNull": true
         },
-        "property_id": {
-          "name": "property_id",
-          "type": "uuid",
+        "status": {
+          "name": "status",
+          "type": "investor_status",
+          "typeSchema": "stayield",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'draft'"
         },
-        "message": {
-          "name": "message",
+        "full_name": {
+          "name": "full_name",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "default": "''"
         },
+        "phone": {
+          "name": "phone",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "investor_type": {
+          "name": "investor_type",
+          "type": "investor_type",
+          "typeSchema": "stayield",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entity_name": {
+          "name": "entity_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "country": {
+          "name": "country",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "budget_min": {
+          "name": "budget_min",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "budget_max": {
+          "name": "budget_max",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "currency": {
+          "name": "currency",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'USD'"
+        },
+        "target_countries": {
+          "name": "target_countries",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "experience": {
+          "name": "experience",
+          "type": "investor_experience",
+          "typeSchema": "stayield",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "financing": {
+          "name": "financing",
+          "type": "investor_financing",
+          "typeSchema": "stayield",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timeline": {
+          "name": "timeline",
+          "type": "investor_timeline",
+          "typeSchema": "stayield",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "about": {
+          "name": "about",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "website": {
+          "name": "website",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_at": {
+          "name": "reviewed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reviewed_by": {
+          "name": "reviewed_by",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
@@ -513,31 +795,19 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "intro_requests_buyer_id_users_id_fk": {
-          "name": "intro_requests_buyer_id_users_id_fk",
-          "tableFrom": "intro_requests",
+        "investor_profiles_user_id_users_id_fk": {
+          "name": "investor_profiles_user_id_users_id_fk",
+          "tableFrom": "investor_profiles",
+          "columnsFrom": [
+            "user_id"
+          ],
           "tableTo": "users",
-          "columnsFrom": [
-            "buyer_id"
-          ],
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "intro_requests_property_id_properties_id_fk": {
-          "name": "intro_requests_property_id_properties_id_fk",
-          "tableFrom": "intro_requests",
-          "tableTo": "properties",
-          "columnsFrom": [
-            "property_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -546,9 +816,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.monthly_aggregates": {
+    "stayield.monthly_aggregates": {
       "name": "monthly_aggregates",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -630,37 +900,39 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "monthly_aggregates_property_id_properties_id_fk": {
           "name": "monthly_aggregates_property_id_properties_id_fk",
           "tableFrom": "monthly_aggregates",
-          "tableTo": "properties",
           "columnsFrom": [
             "property_id"
           ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "monthly_aggregates_submission_id_data_submissions_id_fk": {
           "name": "monthly_aggregates_submission_id_data_submissions_id_fk",
           "tableFrom": "monthly_aggregates",
-          "tableTo": "data_submissions",
           "columnsFrom": [
             "submission_id"
           ],
+          "tableTo": "data_submissions",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -669,129 +941,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.payments": {
-      "name": "payments",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "buyer_id": {
-          "name": "buyer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "property_id": {
-          "name": "property_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "provider": {
-          "name": "provider",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "provider_ref": {
-          "name": "provider_ref",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "amount_minor": {
-          "name": "amount_minor",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "payment_status",
-          "typeSchema": "public",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "completed_at": {
-          "name": "completed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {
-        "payments_buyer_idx": {
-          "name": "payments_buyer_idx",
-          "columns": [
-            {
-              "expression": "buyer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "payments_buyer_id_users_id_fk": {
-          "name": "payments_buyer_id_users_id_fk",
-          "tableFrom": "payments",
-          "tableTo": "users",
-          "columnsFrom": [
-            "buyer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "payments_property_id_properties_id_fk": {
-          "name": "payments_property_id_properties_id_fk",
-          "tableFrom": "payments",
-          "tableTo": "properties",
-          "columnsFrom": [
-            "property_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.properties": {
+    "stayield.properties": {
       "name": "properties",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -809,7 +961,7 @@
         "status": {
           "name": "status",
           "type": "property_status",
-          "typeSchema": "public",
+          "typeSchema": "stayield",
           "primaryKey": false,
           "notNull": true,
           "default": "'draft'"
@@ -888,7 +1040,7 @@
         "trust_tier": {
           "name": "trust_tier",
           "type": "trust_tier",
-          "typeSchema": "public",
+          "typeSchema": "stayield",
           "primaryKey": false,
           "notNull": false
         },
@@ -983,9 +1135,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "properties_status_idx": {
           "name": "properties_status_idx",
@@ -998,43 +1150,44 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "properties_owner_id_users_id_fk": {
           "name": "properties_owner_id_users_id_fk",
           "tableFrom": "properties",
-          "tableTo": "users",
           "columnsFrom": [
             "owner_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "properties_public_slug_unique": {
           "name": "properties_public_slug_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "public_slug"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.property_photos": {
+    "stayield.property_photos": {
       "name": "property_photos",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -1114,24 +1267,25 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "property_photos_property_id_properties_id_fk": {
           "name": "property_photos_property_id_properties_id_fk",
           "tableFrom": "property_photos",
-          "tableTo": "properties",
           "columnsFrom": [
             "property_id"
           ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1140,9 +1294,120 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.reservations": {
+    "stayield.request_messages": {
+      "name": "request_messages",
+      "schema": "stayield",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "request_id": {
+          "name": "request_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_id": {
+          "name": "author_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "author_role": {
+          "name": "author_role",
+          "type": "message_author",
+          "typeSchema": "stayield",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "message_kind",
+          "typeSchema": "stayield",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "body": {
+          "name": "body",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "request_messages_request_idx": {
+          "name": "request_messages_request_idx",
+          "columns": [
+            {
+              "expression": "request_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "with": {},
+          "method": "btree",
+          "concurrently": false
+        }
+      },
+      "foreignKeys": {
+        "request_messages_request_id_access_requests_id_fk": {
+          "name": "request_messages_request_id_access_requests_id_fk",
+          "tableFrom": "request_messages",
+          "columnsFrom": [
+            "request_id"
+          ],
+          "tableTo": "access_requests",
+          "schemaTo": "stayield",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        },
+        "request_messages_author_id_users_id_fk": {
+          "name": "request_messages_author_id_users_id_fk",
+          "tableFrom": "request_messages",
+          "columnsFrom": [
+            "author_id"
+          ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
+          "columnsTo": [
+            "id"
+          ],
+          "onUpdate": "no action",
+          "onDelete": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "stayield.reservations": {
       "name": "reservations",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -1214,7 +1479,7 @@
         "status": {
           "name": "status",
           "type": "reservation_status",
-          "typeSchema": "public",
+          "typeSchema": "stayield",
           "primaryKey": false,
           "notNull": true,
           "default": "'confirmed'"
@@ -1238,9 +1503,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "reservations_conf_uidx": {
           "name": "reservations_conf_uidx",
@@ -1259,37 +1524,39 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "reservations_property_id_properties_id_fk": {
           "name": "reservations_property_id_properties_id_fk",
           "tableFrom": "reservations",
-          "tableTo": "properties",
           "columnsFrom": [
             "property_id"
           ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "reservations_submission_id_data_submissions_id_fk": {
           "name": "reservations_submission_id_data_submissions_id_fk",
           "tableFrom": "reservations",
-          "tableTo": "data_submissions",
           "columnsFrom": [
             "submission_id"
           ],
+          "tableTo": "data_submissions",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1298,9 +1565,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.saved_properties": {
+    "stayield.saved_properties": {
       "name": "saved_properties",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -1347,37 +1614,39 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "saved_properties_buyer_id_users_id_fk": {
           "name": "saved_properties_buyer_id_users_id_fk",
           "tableFrom": "saved_properties",
-          "tableTo": "users",
           "columnsFrom": [
             "buyer_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "saved_properties_property_id_properties_id_fk": {
           "name": "saved_properties_property_id_properties_id_fk",
           "tableFrom": "saved_properties",
-          "tableTo": "properties",
           "columnsFrom": [
             "property_id"
           ],
+          "tableTo": "properties",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1386,9 +1655,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.sessions": {
+    "stayield.sessions": {
       "name": "sessions",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -1453,66 +1722,61 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "sessions_user_id_users_id_fk": {
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "sessions_token_unique": {
           "name": "sessions_token_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "token"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.unlocks": {
-      "name": "unlocks",
-      "schema": "",
+    "stayield.storage_objects": {
+      "name": "storage_objects",
+      "schema": "stayield",
       "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
+        "key": {
+          "name": "key",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
-        "buyer_id": {
-          "name": "buyer_id",
+        "content_type": {
+          "name": "content_type",
           "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": true,
+          "default": "'application/octet-stream'"
         },
-        "property_id": {
-          "name": "property_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "payment_id": {
-          "name": "payment_id",
-          "type": "uuid",
+        "data": {
+          "name": "data",
+          "type": "bytea",
           "primaryKey": false,
           "notNull": true
         },
@@ -1524,79 +1788,17 @@
           "default": "now()"
         }
       },
-      "indexes": {
-        "unlocks_buyer_property_uidx": {
-          "name": "unlocks_buyer_property_uidx",
-          "columns": [
-            {
-              "expression": "buyer_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "property_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "unlocks_buyer_id_users_id_fk": {
-          "name": "unlocks_buyer_id_users_id_fk",
-          "tableFrom": "unlocks",
-          "tableTo": "users",
-          "columnsFrom": [
-            "buyer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "unlocks_property_id_properties_id_fk": {
-          "name": "unlocks_property_id_properties_id_fk",
-          "tableFrom": "unlocks",
-          "tableTo": "properties",
-          "columnsFrom": [
-            "property_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "unlocks_payment_id_payments_id_fk": {
-          "name": "unlocks_payment_id_payments_id_fk",
-          "tableFrom": "unlocks",
-          "tableTo": "payments",
-          "columnsFrom": [
-            "payment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
+      "indexes": {},
+      "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.users": {
+    "stayield.users": {
       "name": "users",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -1633,7 +1835,7 @@
         "role": {
           "name": "role",
           "type": "user_role",
-          "typeSchema": "public",
+          "typeSchema": "stayield",
           "primaryKey": false,
           "notNull": true,
           "default": "'buyer'"
@@ -1659,19 +1861,19 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.verifications": {
+    "stayield.verifications": {
       "name": "verifications",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -1720,9 +1922,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.verified_emails": {
+    "stayield.verified_emails": {
       "name": "verified_emails",
-      "schema": "",
+      "schema": "stayield",
       "columns": {
         "id": {
           "name": "id",
@@ -1787,24 +1989,25 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "verified_emails_user_id_users_id_fk": {
           "name": "verified_emails_user_id_users_id_fk",
           "tableFrom": "verified_emails",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
+          "schemaTo": "stayield",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -1815,19 +2018,88 @@
     }
   },
   "enums": {
-    "public.payment_status": {
-      "name": "payment_status",
-      "schema": "public",
+    "stayield.access_status": {
+      "name": "access_status",
+      "schema": "stayield",
       "values": [
         "pending",
-        "succeeded",
-        "failed",
-        "refunded"
+        "info_requested",
+        "approved",
+        "declined",
+        "withdrawn",
+        "revoked"
       ]
     },
-    "public.property_status": {
+    "stayield.investor_experience": {
+      "name": "investor_experience",
+      "schema": "stayield",
+      "values": [
+        "first_time",
+        "one_to_three",
+        "four_to_ten",
+        "ten_plus"
+      ]
+    },
+    "stayield.investor_financing": {
+      "name": "investor_financing",
+      "schema": "stayield",
+      "values": [
+        "cash",
+        "mortgage",
+        "mixed"
+      ]
+    },
+    "stayield.investor_status": {
+      "name": "investor_status",
+      "schema": "stayield",
+      "values": [
+        "draft",
+        "submitted",
+        "verified",
+        "suspended"
+      ]
+    },
+    "stayield.investor_timeline": {
+      "name": "investor_timeline",
+      "schema": "stayield",
+      "values": [
+        "now",
+        "three_months",
+        "six_to_twelve_months",
+        "exploring"
+      ]
+    },
+    "stayield.investor_type": {
+      "name": "investor_type",
+      "schema": "stayield",
+      "values": [
+        "individual",
+        "family_office",
+        "company",
+        "fund"
+      ]
+    },
+    "stayield.message_author": {
+      "name": "message_author",
+      "schema": "stayield",
+      "values": [
+        "investor",
+        "owner"
+      ]
+    },
+    "stayield.message_kind": {
+      "name": "message_kind",
+      "schema": "stayield",
+      "values": [
+        "request",
+        "question",
+        "answer",
+        "note"
+      ]
+    },
+    "stayield.property_status": {
       "name": "property_status",
-      "schema": "public",
+      "schema": "stayield",
       "values": [
         "draft",
         "data_pending",
@@ -1836,26 +2108,26 @@
         "unpublished"
       ]
     },
-    "public.reservation_status": {
+    "stayield.reservation_status": {
       "name": "reservation_status",
-      "schema": "public",
+      "schema": "stayield",
       "values": [
         "confirmed",
         "canceled"
       ]
     },
-    "public.submission_source": {
+    "stayield.submission_source": {
       "name": "submission_source",
-      "schema": "public",
+      "schema": "stayield",
       "values": [
         "signed_email",
         "csv_upload",
         "api"
       ]
     },
-    "public.submission_status": {
+    "stayield.submission_status": {
       "name": "submission_status",
-      "schema": "public",
+      "schema": "stayield",
       "values": [
         "received",
         "verifying",
@@ -1865,18 +2137,18 @@
         "rejected"
       ]
     },
-    "public.trust_tier": {
+    "stayield.trust_tier": {
       "name": "trust_tier",
-      "schema": "public",
+      "schema": "stayield",
       "values": [
         "signed_email",
         "self_reported",
         "api_verified"
       ]
     },
-    "public.user_role": {
+    "stayield.user_role": {
       "name": "user_role",
-      "schema": "public",
+      "schema": "stayield",
       "values": [
         "seller",
         "buyer",
@@ -1884,11 +2156,13 @@
       ]
     }
   },
-  "schemas": {},
+  "schemas": {
+    "stayield": "stayield"
+  },
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

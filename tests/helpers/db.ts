@@ -9,7 +9,7 @@ import type { Db } from "@/db/client";
 export async function createTestDb(): Promise<{ db: Db; close: () => Promise<void> }> {
   const client = new PGlite();
   const db = drizzle(client, { schema });
-  await migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle") });
+  await migrate(db, { migrationsFolder: path.join(process.cwd(), "drizzle"), migrationsSchema: "stayield" });
   return { db: db as unknown as Db, close: () => client.close() };
 }
 

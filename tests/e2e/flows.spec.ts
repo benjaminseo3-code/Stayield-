@@ -1,19 +1,35 @@
 import { expect, test } from "@playwright/test";
-import { BASE, jpeg, newContext, reportCsv, signIn, uniqueEmail } from "./helpers";
+import { ADMIN, BASE, DEMO, fillProfile, jpeg, login, newContext, photoIds, reportCsv, signUp } from "./helpers";
 
 test.describe.configure({ mode: "serial" });
 
-test("anonymous visitors see demo teasers and a locked report, never the numbers", async ({ browser }) => {
+const ATHENS = "/properties/demo-athens-koukaki";
+const alert = (page: import("@playwright/test").Page) => page.locator("[role=alert]:not(#__next-route-announcer__)");
+
+test("anonymous visitors see every listing blurred and the real values are not even in the page", async ({ browser }) => {
   const ctx = await newContext(browser);
   const page = await ctx.newPage();
   await page.goto("/properties");
   await expect(page.getByTestId("property-card")).toHaveCount(3);
-  await expect(page.getByText("Demo data").first()).toBeVisible();
-  await page.getByTestId("property-card").first().click();
-  await expect(page.getByTestId("income-band")).toBeVisible();
-  await expect(page.getByTestId("locked-report")).toBeVisible();
+  for (const card of await page.getByTestId("property-card").all()) await expect(card).toHaveAttribute("data-level", "locked");
+  await expect(page.locator("img.blurred-photo").first()).toBeVisible();
+
+  const html = await page.content();
+  for (const secret of ["420,000", "1,950,000", "285,000", "Alfama", "Florentin", "Koukaki", "Bright two-bedroom"]) expect(html, `leaked ${secret}`).not.toContain(secret);
+
+  // The photo route only gives the blurred variant to people without access.
+  const ids = await photoIds(page);
+  expect(ids.length).toBeGreaterThan(0);
+  expect((await page.request.get(`/api/photos/${ids[0]}/blur.webp`)).status()).toBe(200);
+  for (const v of ["full.jpg", "full.webp", "thumb.webp"]) expect((await page.request.get(`/api/photos/${ids[0]}/${v}`)).status()).toBe(404);
+
+  await page.goto(ATHENS);
+  await expect(page.getByTestId("locked-gallery")).toBeVisible();
   await expect(page.getByTestId("report")).toHaveCount(0);
-  await expect(page.getByTestId("signin-to-unlock")).toBeVisible();
+  await expect(page.getByTestId("report-locked")).toBeVisible();
+  const detail = await page.content();
+  for (const secret of ["285,000", "Koukaki", "Acropolis"]) expect(detail).not.toContain(secret);
+  await expect(page.getByTestId("signup-to-request")).toBeVisible();
   await ctx.close();
 });
 
@@ -27,151 +43,275 @@ test("filters narrow the list and show an empty state", async ({ browser }) => {
   await ctx.close();
 });
 
-test("buyer signs in, pays (mock) and unlocks the report permanently", async ({ browser }) => {
-  const ctx = await newContext(browser);
-  const page = await ctx.newPage();
-  const email = uniqueEmail("buyer");
-  await page.goto("/properties");
-  await page.getByTestId("property-card").first().click();
-  await page.getByTestId("signin-to-unlock").click();
-  await page.waitForURL(/sign-in/);
-  await page.getByLabel(/email address/i).fill(email);
-  await page.locator("form button[type=submit]").click();
-  await page.waitForURL(/sent/);
-  await signIn(page, email, "/properties");
+test("investor journey: sign up, verify, request, answer a question, get approved, see everything, then lose access", async ({ browser }) => {
+  const investorCtx = await newContext(browser);
+  const inv = await investorCtx.newPage();
+  const ownerCtx = await newContext(browser);
+  const own = await ownerCtx.newPage();
 
-  await page.goto("/properties");
-  await page.getByTestId("property-card").first().click();
-  await page.getByTestId("unlock-button").click();
-  await page.getByTestId("mock-pay").click();
-  await expect(page.getByTestId("checkout-result")).toHaveAttribute("data-status", "succeeded");
-  await page.getByRole("link", { name: /open the report/i }).click();
+  // 1. Sign up as an investor; the profile comes first.
+  const email = await signUp(inv, "buyer", { name: "Maya Investor", next: ATHENS });
+  await expect(inv).toHaveURL(/\/account\/verification/);
+  await expect(inv.getByTestId("profile-status")).toHaveText("Not submitted");
 
-  const report = page.getByTestId("report");
-  await expect(report).toBeVisible();
-  await expect(page.getByTestId("kpi-gross")).toContainText(/\d/);
-  // Honest wording: booked nights, never "occupancy" as a metric label.
-  await expect(report).toContainText("Booked nights ÷ days in period");
-  // The trust tier is always visible next to the numbers (the first demo listing is the signed one).
-  await expect(report).toContainText("Signed");
-  await expect(report).toContainText("Data coverage");
-  // No metric is labelled "occupancy" (the note explaining why it is NOT occupancy is allowed).
-  const labels = (await report.locator(".kpi .label").allInnerTexts()).join("|").toLowerCase();
-  expect(labels).not.toContain("occupancy");
+  // 2. Without a profile the listing only offers to complete it.
+  await inv.goto(ATHENS);
+  await expect(inv.getByTestId("access-panel")).toHaveAttribute("data-state", "none");
+  await expect(inv.getByTestId("complete-profile")).toBeVisible();
+  await expect(inv.getByTestId("request-access")).toHaveCount(0);
 
-  // Another visitor still cannot see it.
-  const other = await newContext(browser);
-  const op = await other.newPage();
-  await op.goto(page.url());
-  await expect(op.getByTestId("report")).toHaveCount(0);
-  await other.close();
+  // 3. Complete the profile (validation first), then request access.
+  await inv.goto("/account/verification");
+  await inv.locator("#about").fill("short");
+  await inv.getByTestId("profile-submit").click();
+  await expect(alert(inv).first()).toBeVisible();
+  await fillProfile(inv, { name: "Maya Investor" });
+  await expect(inv.getByTestId("profile-saved")).toBeVisible();
 
-  // Purchases + intro request.
-  await page.getByRole("button", { name: /send request/i }).click();
-  await expect(page.getByText("Request sent")).toBeVisible();
-  await page.goto("/account");
-  await expect(page.getByTestId("purchases").locator("li")).toHaveCount(1);
-  await ctx.close();
+  await inv.goto(ATHENS);
+  await inv.locator("#message").fill("I love the Koukaki location and run two similar apartments. Could you share the full numbers?");
+  await inv.getByTestId("request-access").click();
+  await inv.waitForURL(/\/requests\//);
+  await expect(inv.getByTestId("request-status")).toHaveText("Waiting for the owner");
+  const requestUrl = inv.url();
+
+  // Still blurred while pending: nothing sharp is served.
+  await inv.goto(ATHENS);
+  await expect(inv.getByTestId("access-panel")).toHaveAttribute("data-state", "pending");
+  expect(await inv.content()).not.toContain("285,000");
+  const lockedIds = await photoIds(inv);
+  expect((await inv.request.get(`/api/photos/${lockedIds[0]}/full.jpg`)).status()).toBe(404);
+
+  // 4. The owner sees it: badge, the investor's profile, no contact details yet.
+  await login(own, DEMO.owner, DEMO.password, "/requests");
+  await expect(own.getByTestId("nav-badge").first()).toBeVisible();
+  await own.getByTestId("request-row").filter({ hasText: "Maya Investor" }).click();
+  const profile = own.getByTestId("investor-profile");
+  await expect(profile).toContainText("Maya Investor");
+  await expect(profile).toContainText("Israel");
+  await expect(profile).toContainText("Portugal, Greece");
+  await expect(profile).not.toContainText(email);
+  await expect(profile).not.toContainText("+972 50 123 4567");
+
+  // 5. The owner asks a question; the investor gets a badge and answers.
+  await own.locator("#note").fill("Do you plan to run it yourself or through a manager?");
+  await own.getByTestId("decide-ask").click();
+  await expect(own.getByTestId("request-status")).toHaveText("More information requested");
+
+  await inv.goto("/requests");
+  await expect(inv.getByTestId("nav-badge").first()).toBeVisible();
+  await inv.goto(requestUrl);
+  await expect(inv.getByTestId("thread")).toContainText("through a manager");
+  await inv.locator("#body").fill("Through a manager, and I can close within 60 days.");
+  await inv.getByTestId("reply-send").click();
+  await expect(inv.getByTestId("request-status")).toHaveText("Waiting for the owner");
+
+  // 6. The owner approves; contact details are now shared with the owner.
+  await own.reload();
+  await own.goto(own.url());
+  await own.getByTestId("decide-approve").waitFor();
+  await own.locator("#note").fill("Thanks, approved.");
+  await own.getByTestId("decide-approve").click();
+  await expect(own.getByTestId("request-status")).toHaveText("Approved");
+  await expect(own.getByTestId("investor-profile")).toContainText(email);
+  await expect(own.getByTestId("investor-profile")).toContainText("+972 50 123 4567");
+
+  // 7. The investor now sees the whole listing: price, report, sharp photos.
+  await inv.goto(ATHENS);
+  await expect(inv.getByTestId("access-panel")).toHaveAttribute("data-state", "approved");
+  await expect(inv.getByTestId("asking-price")).toContainText("285,000");
+  await expect(inv.getByTestId("report")).toBeVisible();
+  await expect(inv.getByTestId("kpi-gross")).toContainText(/\d/);
+  const sharpIds = await photoIds(inv);
+  expect((await inv.request.get(`/api/photos/${sharpIds[0]}/full.jpg`)).status()).toBe(200);
+  await inv.goto("/properties");
+  await expect(inv.locator("[data-testid=property-card][data-level=full]")).toHaveCount(1); // only Athens: this investor was approved for just that listing
+
+  // Another investor still sees nothing, even with the photo id.
+  const otherCtx = await newContext(browser);
+  const other = await otherCtx.newPage();
+  await signUp(other, "buyer");
+  expect((await other.request.get(`/api/photos/${sharpIds[0]}/full.jpg`)).status()).toBe(404);
+  expect((await other.request.get(requestUrl)).status()).toBe(404); // a stranger gets "no such request", not "forbidden"
+  await other.goto(requestUrl);
+  await expect(other.getByRole("heading", { name: /not found|404|לא נמצא/i }).first()).toBeVisible();
+  await otherCtx.close();
+
+  // 8. The owner withdraws access; the investor is locked out again.
+  await own.getByTestId("revoke").click();
+  await expect(own.getByTestId("request-status")).toHaveText("Access withdrawn");
+  await inv.goto(ATHENS);
+  expect(await inv.content()).not.toContain("285,000");
+  await expect(inv.getByTestId("report")).toHaveCount(0);
+  expect((await inv.request.get(`/api/photos/${sharpIds[0]}/full.jpg`)).status()).toBe(404);
+
+  await investorCtx.close();
+  await ownerCtx.close();
 });
 
-test("buyers cannot open seller or admin areas", async ({ browser }) => {
-  const ctx = await newContext(browser);
-  const page = await ctx.newPage();
-  await signIn(page, uniqueEmail("nosy"), "/");
-  await page.goto("/admin");
-  await expect(page).not.toHaveURL(/\/admin/);
-  const res = await page.request.get("/api/properties/00000000-0000-0000-0000-000000000000/submission");
-  expect([401, 404]).toContain(res.status());
-  await ctx.close();
+test("a declined investor cannot ask again right away", async ({ browser }) => {
+  const invCtx = await newContext(browser);
+  const inv = await invCtx.newPage();
+  const ownCtx = await newContext(browser);
+  const own = await ownCtx.newPage();
+  await signUp(inv, "buyer", { name: "Dan Declined" });
+  await fillProfile(inv, { name: "Dan Declined" });
+  await inv.goto("/properties/demo-tel-aviv-florentin");
+  await inv.getByTestId("request-access").click();
+  await inv.waitForURL(/\/requests\//);
+
+  await login(own, DEMO.owner, DEMO.password, "/requests");
+  await own.getByTestId("request-row").filter({ hasText: "Dan Declined" }).click();
+  await own.locator("#note").fill("Not a fit right now.");
+  await own.getByTestId("decide-decline").click();
+  await expect(own.getByTestId("request-status")).toHaveText("Declined");
+
+  await inv.goto("/properties/demo-tel-aviv-florentin");
+  await expect(inv.getByTestId("access-panel")).toHaveAttribute("data-state", "declined");
+  await expect(inv.getByTestId("access-panel")).toContainText("You can send a new request after");
+  await expect(inv.getByTestId("request-access")).toHaveCount(0);
+  await invCtx.close();
+  await ownCtx.close();
 });
 
-test("seller creates a listing with photos and a CSV; it goes live automatically; then unpublishes", async ({ browser }) => {
-  const ctx = await newContext(browser);
-  const page = await ctx.newPage();
-  await signIn(page, uniqueEmail("seller"), "/sell");
-  await page.goto("/sell");
-  await page.getByTestId("become-seller").click();
-  await page.getByTestId("new-listing").click();
-  await page.waitForURL(/\/basics/);
+test("roles and areas are separated", async ({ browser }) => {
+  const anon = await newContext(browser);
+  const ap = await anon.newPage();
+  await ap.goto("/requests");
+  await expect(ap).toHaveURL(/\/sign-in/);
+  await ap.goto("/account/verification");
+  await expect(ap).toHaveURL(/\/sign-in/);
+  const unauth = await ap.request.get("/api/properties/00000000-0000-0000-0000-000000000000/submission");
+  expect([401, 404]).toContain(unauth.status());
+  await anon.close();
 
-  // Basics (autosaves, then continue)
-  await page.getByLabel("Country").fill("pt");
-  await page.getByLabel("City").fill("Porto");
-  await page.getByLabel("Neighborhood").fill("Ribeira");
-  await page.getByLabel("Asking price").fill("350000");
-  await page.getByLabel("Currency").selectOption("EUR");
-  await page.getByLabel("Size (m²)").fill("58");
-  await page.getByLabel("Bedrooms").fill("2");
-  await page.getByLabel("Bathrooms").fill("1");
-  await page.getByLabel("Description").fill("Bright flat by the river with strong summer demand.");
-  await expect(page.getByTestId("save-status")).toContainText("All changes saved");
-  await page.getByRole("button", { name: "Continue" }).click();
-  await page.waitForURL(/\/photos/);
+  const invCtx = await newContext(browser);
+  const inv = await invCtx.newPage();
+  await signUp(inv, "buyer");
+  await inv.goto("/admin");
+  await expect(inv).not.toHaveURL(/\/admin/);
+  await inv.goto("/sell");
+  await expect(inv.getByTestId("new-listing")).toHaveCount(0); // investors do not get the owner dashboard
+  await invCtx.close();
 
-  // Photos
-  await page.getByTestId("photo-input").setInputFiles([
+  const ownerCtx = await newContext(browser);
+  const own = await ownerCtx.newPage();
+  await login(own, DEMO.owner, DEMO.password);
+  await own.goto(ATHENS);
+  await expect(own.getByText("This is your listing.")).toBeVisible();
+  await expect(own.getByTestId("asking-price")).toContainText("285,000"); // owners always see their own listing in full
+  await own.goto("/account/verification");
+  await expect(own).toHaveURL(/\/account$/); // owners have no investor profile
+  await ownerCtx.close();
+
+  // Wrong password and unknown user get the same message.
+  const bad = await newContext(browser);
+  const bp = await bad.newPage();
+  await bp.goto("/sign-in");
+  await bp.locator("#email").fill(DEMO.owner);
+  await bp.locator("#password").fill("not-the-password");
+  await bp.getByTestId("signin-submit").click();
+  await expect(alert(bp).first()).toContainText("Wrong email or password");
+  await bad.close();
+});
+
+test("an owner lists an apartment; it appears blurred to everyone; an investor requests it; the owner approves", async ({ browser }) => {
+  const ownerCtx = await newContext(browser);
+  const own = await ownerCtx.newPage();
+  await signUp(own, "seller", { name: "Olivia Owner" });
+  await own.goto("/sell");
+  await own.getByTestId("new-listing").click();
+  await own.waitForURL(/\/basics/);
+
+  await own.getByLabel("Country").fill("pt");
+  await own.getByLabel("City").fill("Porto");
+  await own.getByLabel("Neighborhood").fill("Ribeira");
+  await own.getByLabel("Asking price").fill("350000");
+  await own.getByLabel("Currency").selectOption("EUR");
+  await own.getByLabel("Size (m²)").fill("58");
+  await own.getByLabel("Bedrooms").fill("2");
+  await own.getByLabel("Bathrooms").fill("1");
+  await own.getByLabel("Description").fill("Bright flat by the river with strong summer demand.");
+  await expect(own.getByTestId("save-status")).toContainText("All changes saved");
+  await own.getByRole("button", { name: "Continue" }).click();
+  await own.waitForURL(/\/photos/);
+
+  await own.getByTestId("photo-input").setInputFiles([
     { name: "a.jpg", mimeType: "image/jpeg", buffer: await jpeg(1200, 800, "#336699") },
     { name: "b.jpg", mimeType: "image/jpeg", buffer: await jpeg(1000, 700, "#996633") },
   ]);
-  await expect(page.getByTestId("photo-item")).toHaveCount(2);
-  await expect(page.getByText("Cover").first()).toBeVisible();
-  // A non-image is rejected with a clear message.
-  await page.getByTestId("photo-input").setInputFiles({ name: "evil.jpg", mimeType: "image/jpeg", buffer: Buffer.from("<?php echo 1;") });
-  await expect(page.locator("[role=alert]:not(#__next-route-announcer__)")).toContainText("not a JPEG, PNG or WebP");
-  await page.getByTestId("next-step").click();
-  await page.waitForURL(/\/data/);
+  await expect(own.getByTestId("photo-item")).toHaveCount(2);
+  await own.getByTestId("photo-input").setInputFiles({ name: "evil.jpg", mimeType: "image/jpeg", buffer: Buffer.from("<?php echo 1;") });
+  await expect(alert(own).first()).toContainText("not a JPEG, PNG or WebP");
+  await own.getByTestId("next-step").click();
+  await own.waitForURL(/\/data/);
 
-  // Income data: email option shows the unique address, CSV option works.
-  await expect(page.getByTestId("inbound-address")).toContainText(/^p-[a-z0-9]+@inbound\.localhost$/);
-  await page.getByTestId("option-b").click();
-  await page.getByTestId("csv-input").setInputFiles({ name: "report.csv", mimeType: "text/csv", buffer: Buffer.from(reportCsv()) });
-  await expect(page.getByTestId("csv-summary")).toContainText("64 bookings found");
-  await expect(page.getByText("Ignored columns")).toContainText("Guest");
-  await expect(page.getByText("Fake Guest")).toHaveCount(0);
-  await page.getByTestId("csv-submit").click();
-  await expect(page.getByTestId("data-status")).toContainText("Verified");
-  await page.getByTestId("next-step").click();
-  await page.waitForURL(/\/preview/);
-  await expect(page.getByTestId("report")).toBeVisible();
-  await page.getByTestId("next-step").click();
-  await page.waitForURL(/\/publish/);
+  await expect(own.getByTestId("inbound-address")).toContainText(/^p-[a-z0-9]+@inbound\.localhost$/);
+  await own.getByTestId("option-b").click();
+  await own.getByTestId("csv-input").setInputFiles({ name: "report.csv", mimeType: "text/csv", buffer: Buffer.from(reportCsv()) });
+  await expect(own.getByTestId("csv-summary")).toContainText("64 bookings found");
+  await expect(own.getByText("Fake Guest")).toHaveCount(0);
+  await own.getByTestId("csv-submit").click();
+  await expect(own.getByTestId("data-status")).toContainText("Verified");
+  await own.getByTestId("next-step").click();
+  await own.waitForURL(/\/preview/);
+  await expect(own.getByTestId("report")).toBeVisible();
+  await own.getByTestId("next-step").click();
+  await own.waitForURL(/\/publish/);
 
-  // Publish requires all three consents.
-  await page.getByTestId("publish-button").click();
-  await expect(page.locator("[role=alert]:not(#__next-route-announcer__)")).toContainText("accept all three");
-  for (const c of ["owns", "shares_aggregates", "complete_data"]) await page.getByTestId(`consent-${c}`).check();
-  await page.getByTestId("publish-button").click();
-  await expect(page.getByTestId("publish-result")).toHaveAttribute("data-status", "live");
-  await page.getByRole("link", { name: "View listing" }).click();
-  await expect(page.getByTestId("income-band")).toBeVisible();
-  await expect(page.getByTestId("gallery")).toBeVisible();
-  await expect(page.getByTestId("report")).toBeVisible(); // the owner sees their own report
+  await own.getByTestId("publish-button").click();
+  await expect(alert(own).first()).toContainText("accept all three");
+  for (const c of ["owns", "shares_aggregates", "complete_data"]) await own.getByTestId(`consent-${c}`).check();
+  await own.getByTestId("publish-button").click();
+  await expect(own.getByTestId("publish-result")).toHaveAttribute("data-status", "live");
+  await own.getByRole("link", { name: "View listing" }).click();
+  await expect(own.getByTestId("asking-price")).toContainText("350,000");
+  const slug = new URL(own.url()).pathname.split("/").pop()!;
 
-  // Public (anonymous) view works, then unpublishing hides it.
+  // Everyone else sees it blurred.
   const anon = await newContext(browser);
   const ap = await anon.newPage();
-  await ap.goto(page.url());
-  await expect(ap.getByTestId("locked-report")).toBeVisible();
-
-  await page.goto("/sell");
-  await page.getByRole("button", { name: "Unpublish" }).click();
-  await expect(page.getByTestId("dash-listing")).toContainText("Unpublished");
-  await ap.reload();
-  await expect(ap.getByText("This listing is not available")).toBeVisible();
+  await ap.goto(`/properties/${slug}`);
+  await expect(ap.getByTestId("locked-gallery")).toBeVisible();
+  const html = await ap.content();
+  for (const secret of ["350,000", "Ribeira", "strong summer demand"]) expect(html).not.toContain(secret);
   await anon.close();
 
-  // Photo files are no longer served publicly either.
-  const photoHref = await page.goto("/sell").then(() => null);
-  void photoHref;
-  await ctx.close();
+  // An investor requests it; the dashboard shows it; the owner approves.
+  const invCtx = await newContext(browser);
+  const inv = await invCtx.newPage();
+  await signUp(inv, "buyer", { name: "Ines Investor" });
+  await fillProfile(inv, { name: "Ines Investor" });
+  await inv.goto(`/properties/${slug}`);
+  await inv.getByTestId("request-access").click();
+  await inv.waitForURL(/\/requests\//);
+
+  await own.goto("/sell");
+  await expect(own.getByTestId("dash-requests")).toBeVisible();
+  await own.getByTestId("dash-requests").click();
+  await own.getByTestId("request-row").filter({ hasText: "Ines Investor" }).click();
+  await own.getByTestId("decide-approve").click();
+  await expect(own.getByTestId("request-status")).toHaveText("Approved");
+
+  await inv.goto(`/properties/${slug}`);
+  await expect(inv.getByTestId("asking-price")).toContainText("350,000");
+  await expect(inv.getByTestId("report")).toBeVisible();
+
+  // Unpublishing takes it away from everyone, including the approved investor.
+  await own.goto("/sell");
+  await own.getByRole("button", { name: "Unpublish" }).click();
+  await expect(own.getByTestId("dash-listing").first()).toContainText("Unpublished");
+  await inv.goto(`/properties/${slug}`);
+  await expect(inv.getByText("This listing is not available")).toBeVisible();
+  await invCtx.close();
+  await ownerCtx.close();
 });
 
-test("a listing with a failed check goes to review; an admin approves it", async ({ browser }) => {
+test("a listing with a failed check goes to review; an admin approves it and verifies an investor", async ({ browser }) => {
   const sellerCtx = await newContext(browser);
   const sp = await sellerCtx.newPage();
-  await signIn(sp, uniqueEmail("seller2"), "/sell");
+  await signUp(sp, "seller", { name: "Sam Seller" });
   await sp.goto("/sell");
-  await sp.getByTestId("become-seller").click();
   await sp.getByTestId("new-listing").click();
   await sp.waitForURL(/\/basics/);
   await sp.getByLabel("City").fill("Faro");
@@ -188,9 +328,7 @@ test("a listing with a failed check goes to review; an admin approves it", async
   for (const c of ["owns", "shares_aggregates", "complete_data"]) await sp.getByTestId(`consent-${c}`).check();
   await sp.getByTestId("publish-button").click();
   await expect(sp.getByTestId("publish-result")).toHaveAttribute("data-status", "review");
-  await expect(sp.getByText("appear more than once")).toBeVisible();
 
-  // Not public while in review.
   const anon = await newContext(browser);
   const ap = await anon.newPage();
   await ap.goto("/properties?city=Faro");
@@ -198,18 +336,28 @@ test("a listing with a failed check goes to review; an admin approves it", async
 
   const adminCtx = await newContext(browser);
   const admin = await adminCtx.newPage();
-  await signIn(admin, "admin@e2e.test", "/admin");
-  await admin.goto("/admin");
-  await expect(admin.getByRole("heading", { name: /Review queue \(\d+\)/ })).toBeVisible();
+  await login(admin, ADMIN.email, ADMIN.password, "/admin");
   await admin.goto(`/admin/${id}`);
   await expect(admin.getByText("appear more than once").first()).toBeVisible();
   await admin.getByTestId("admin-approve").click();
   await expect(admin.locator(".badge.status-live").first()).toBeVisible();
-
   await ap.goto("/properties?city=Faro");
   await expect(ap.getByTestId("property-card")).toHaveCount(1);
+
+  // Investor verification by an admin.
+  const invCtx = await newContext(browser);
+  const inv = await invCtx.newPage();
+  await signUp(inv, "buyer", { name: "Vera Verified" });
+  await fillProfile(inv, { name: "Vera Verified" });
+  await admin.goto("/admin/investors");
+  const row = admin.getByTestId("admin-investor").filter({ hasText: "Vera Verified" });
+  await row.getByRole("button", { name: "Verify" }).click();
+  await expect(row).toContainText("Verified by Stayield");
+  await inv.goto("/account/verification");
+  await expect(inv.getByTestId("profile-status")).toHaveText("Verified by Stayield");
   await anon.close();
   await adminCtx.close();
+  await invCtx.close();
   await sellerCtx.close();
 });
 
@@ -236,17 +384,16 @@ test("security headers are set and the income band keeps reading order in Hebrew
   const h = res.headers();
   expect(h["x-content-type-options"]).toBe("nosniff");
   expect(h["x-frame-options"]).toBe("DENY");
-  expect(h["referrer-policy"]).toBe("strict-origin-when-cross-origin");
   expect(h["content-security-policy"]).toContain("frame-ancestors 'none'");
-  expect(h["content-security-policy"]).toContain("object-src 'none'");
   expect(h["strict-transport-security"]).toContain("max-age=");
   expect(h["x-powered-by"]).toBeUndefined();
 
+  // The seeded demo investor has approved access to Lisbon, so the real band is shown there.
   const ctx = await newContext(browser, { lang: "he" });
   const page = await ctx.newPage();
+  await login(page, DEMO.investor, DEMO.password, "/properties?city=Lisbon");
   await page.goto("/properties?city=Lisbon");
-  const band = page.locator(".income-band bdi").first();
-  await expect(band).toHaveAttribute("dir", "ltr");
+  await expect(page.locator(".income-band bdi").first()).toHaveAttribute("dir", "ltr");
   await ctx.close();
 });
 

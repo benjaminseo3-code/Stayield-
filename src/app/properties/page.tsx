@@ -2,7 +2,8 @@ import Link from "next/link";
 import { PropertyCard } from "@/components/PropertyCard";
 import { getDb } from "@/db/client";
 import { getT } from "@/i18n/server";
-import { listLiveTeasers } from "@/lib/data/teaser";
+import { listLiveListings } from "@/lib/data/listings";
+import { currentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -10,19 +11,16 @@ export async function generateMetadata() {
   const { t } = await getT();
   return { title: t("props.title") };
 }
-type SP = { city?: string; min?: string; max?: string; beds?: string; trust?: string };
-
-const toMinor = (v?: string) => (v && !Number.isNaN(Number(v)) && Number(v) >= 0 ? Math.round(Number(v) * 100) : undefined);
+type SP = { city?: string; country?: string; beds?: string; trust?: string };
 
 export default async function Properties({ searchParams }: { searchParams: Promise<SP> }) {
   const { t } = await getT();
   const sp = await searchParams;
   const trust = sp.trust === "signed_email" || sp.trust === "self_reported" || sp.trust === "api_verified" ? sp.trust : undefined;
-  const filtered = !!(sp.city || sp.min || sp.max || sp.beds || trust);
-  const items = await listLiveTeasers(await getDb(), {
+  const filtered = !!(sp.city || sp.country || sp.beds || trust);
+  const items = await listLiveListings(await getDb(), await currentUser(), {
     city: sp.city?.trim() || undefined,
-    minPriceMinor: toMinor(sp.min),
-    maxPriceMinor: toMinor(sp.max),
+    country: sp.country?.trim() || undefined,
     minBedrooms: sp.beds && Number(sp.beds) >= 0 ? Number(sp.beds) : undefined,
     trustTier: trust,
   });
@@ -33,6 +31,7 @@ export default async function Properties({ searchParams }: { searchParams: Promi
         <div>
           <h1 style={{ marginBottom: 4 }}>{t("props.title")}</h1>
           <p className="muted" style={{ margin: 0 }}>{t("props.sub")}</p>
+          <p className="notice small" style={{ marginTop: 12 }}>🔒 {t("props.lockedNote")}</p>
         </div>
 
         <form method="get" className="card card-pad" aria-label={t("props.filters")}>
@@ -42,12 +41,8 @@ export default async function Properties({ searchParams }: { searchParams: Promi
               <input id="f-city" name="city" className="input" defaultValue={sp.city ?? ""} />
             </div>
             <div className="field">
-              <label htmlFor="f-min">{t("props.filter.minPrice")}</label>
-              <input id="f-min" name="min" type="number" min={0} inputMode="numeric" className="input" defaultValue={sp.min ?? ""} dir="ltr" />
-            </div>
-            <div className="field">
-              <label htmlFor="f-max">{t("props.filter.maxPrice")}</label>
-              <input id="f-max" name="max" type="number" min={0} inputMode="numeric" className="input" defaultValue={sp.max ?? ""} dir="ltr" />
+              <label htmlFor="f-country">{t("props.filter.country")}</label>
+              <input id="f-country" name="country" className="input" defaultValue={sp.country ?? ""} placeholder="PT" dir="ltr" maxLength={2} />
             </div>
             <div className="field">
               <label htmlFor="f-beds">{t("props.filter.bedrooms")}</label>

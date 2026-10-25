@@ -1,25 +1,9 @@
 /** Auth, account, seller dashboard and the listing wizard. */
 export const enSell = {
   "auth.title": "Sign in",
-  "auth.sub": "Enter your email and we'll send you a one-time sign-in link. No password needed.",
   "auth.email": "Email address",
-  "auth.send": "Send sign-in link",
-  "auth.sentTitle": "Check your email",
-  "auth.sentBody": "We sent a sign-in link to {email}. It expires in 10 minutes.",
-  "auth.devHint": "Development mode: the email is written to the local outbox.",
-  "auth.openOutbox": "Open the dev outbox",
   "auth.invalidEmail": "Please enter a valid email address.",
   "auth.signOut": "Sign out",
-  "auth.tryAgain": "Use a different email",
-  "auth.demo.title": "Demo accounts",
-  "auth.demo.body": "This is a public demo with synthetic data. Sign in with one of these accounts (emails are not sent in the demo).",
-  "auth.demo.buyer": "Buyer",
-  "auth.demo.seller": "Seller",
-  "auth.demo.fill": "Fill in",
-  "auth.demo.password": "Password",
-  "auth.demo.signIn": "Sign in",
-  "auth.demo.badCredentials": "Wrong email or password.",
-  "auth.demo.note": "Demo data lives in server memory and can reset when the server restarts.",
 
   "account.title": "Your account",
   "account.email": "Email",
@@ -52,14 +36,14 @@ export const enSell = {
 
   "sell.hero.title": "Sell your apartment with proof of income",
   "sell.hero.sub":
-    "Buyers pay more attention to apartments whose income is verified. Add your photos, prove your history, and publish in minutes.",
+    "Investors ask for access to your listing with a verified profile. You see who they are and decide who gets the price, photos and income.",
   "sell.cta.start": "Create a listing",
   "sell.cta.signIn": "Sign in to start",
   "sell.why.1.title": "Forward one email",
   "sell.why.1.body":
     "Forward the earnings report your booking platform emails you. Its digital signature proves it is genuine.",
-  "sell.why.2.title": "You stay in control",
-  "sell.why.2.body": "Buyers see aggregates only. Guest names and contact details never reach us.",
+  "sell.why.2.title": "You decide who sees it",
+  "sell.why.2.body": "Photos, price and income are blurred for everyone until you approve a request. Guest names and contact details never reach us.",
   "sell.why.3.title": "Unpublish any time",
   "sell.why.3.body": "Take the listing down, or delete all your data, whenever you like.",
 

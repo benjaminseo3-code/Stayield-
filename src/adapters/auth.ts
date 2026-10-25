@@ -4,12 +4,10 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink } from "better-auth/plugins";
 import { nextCookies } from "better-auth/next-js";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db/client";
-import { getMailer } from "@/adapters";
-import { appUrl, isDemoMode } from "@/lib/app-url";
+import { appUrl } from "@/lib/app-url";
 import type { AuthAdapter, SessionUser } from "@/ports/auth";
 
 function authSecret(): string {
@@ -46,12 +44,9 @@ async function build() {
     secret: authSecret(),
     baseURL: appUrl(),
     trustedOrigins: [appUrl(), ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []), ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : [])],
-    // Demo only: credentials login for the seeded accounts; self sign-up stays off.
-    // The signed session cookie is trusted for 12h so a request served by a different serverless
-    // instance (each has its own in-memory demo database) does not log the visitor out.
-    ...(isDemoMode()
-      ? { emailAndPassword: { enabled: true, disableSignUp: true }, session: { cookieCache: { enabled: true, maxAge: 12 * 3600 } } }
-      : {}),
+    // Email + password. Real email delivery is not wired yet, so addresses are not verified at
+    // sign-up (the sender-email binding for signed reports needs a verified address; see account page).
+    emailAndPassword: { enabled: true, minPasswordLength: 8, maxPasswordLength: 128, autoSignIn: true, requireEmailVerification: false },
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: {
@@ -70,30 +65,18 @@ async function build() {
       user: {
         create: {
           after: async (user) => {
-            // The address that signed in via magic link is, by definition, verified.
-            await db
-              .insert(schema.verifiedEmails)
-              .values({ userId: user.id, email: user.email.toLowerCase(), verifiedAt: new Date() })
-              .onConflictDoNothing();
+            // Only an address that was proven (email verified) may bind signed reports to this account.
+            if (user.emailVerified) {
+              await db
+                .insert(schema.verifiedEmails)
+                .values({ userId: user.id, email: user.email.toLowerCase(), verifiedAt: new Date() })
+                .onConflictDoNothing();
+            }
           },
         },
       },
     },
-    plugins: [
-      magicLink({
-        expiresIn: 60 * 10,
-        // 5 sign-in emails per minute per client; stops mail bombing and token guessing.
-        rateLimit: { window: 60, max: rateLimitOff() ? 10_000 : 5 },
-        sendMagicLink: async ({ email, url }) => {
-          await getMailer().send({
-            to: email,
-            subject: "Sign in to Stayield · התחברות ל-Stayield",
-            text: `Sign in to Stayield:\n${url}\n\nהתחברות ל-Stayield:\n${url}\n\nThis link expires in 10 minutes. If you did not request it, ignore this email.`,
-          });
-        },
-      }),
-      nextCookies(),
-    ],
+    plugins: [nextCookies()],
   });
 }
 
@@ -107,7 +90,7 @@ export const betterAuthAdapter: AuthAdapter = {
     const s = await a.api.getSession({ headers });
     if (!s) return null;
     let role = (s.user as { role?: string }).role as SessionUser["role"] | undefined;
-    // Admins are provisioned from env only, and only for an email that completed a magic link.
+    // Admins are provisioned from env only, and only for an email marked verified.
     if (role !== "admin" && s.user.emailVerified && adminEmails().includes(s.user.email.toLowerCase())) {
       const db = await getDb();
       await db.update(schema.users).set({ role: "admin" }).where(eq(schema.users.id, s.user.id));
@@ -118,14 +101,23 @@ export const betterAuthAdapter: AuthAdapter = {
   async handler(req) {
     return (await auth()).handler(req);
   },
-  async sendMagicLink(email, callbackURL, headers) {
+  async signUp(input, headers) {
     const a = await auth();
-    await a.api.signInMagicLink({ body: { email, callbackURL }, headers });
+    try {
+      const res = await a.api.signUpEmail({ body: { email: input.email, password: input.password, name: input.name }, headers });
+      const userId = res.user.id;
+      // Role is chosen from a fixed list here and can never be "admin" via sign-up.
+      const db = await getDb();
+      await db.update(schema.users).set({ role: input.role }).where(eq(schema.users.id, userId));
+      return { ok: true as const, userId };
+    } catch (e) {
+      const msg = String((e as { message?: string }).message ?? "").toLowerCase();
+      return { ok: false as const, error: msg.includes("exist") ? ("exists" as const) : ("invalid" as const) };
+    }
   },
   async signInWithPassword(email, password, headers) {
-    if (!isDemoMode()) return false;
+    const a = await auth();
     try {
-      const a = (await auth()) as unknown as { api: { signInEmail: (o: { body: { email: string; password: string }; headers: Headers }) => Promise<unknown> } };
       await a.api.signInEmail({ body: { email, password }, headers });
       return true;
     } catch {

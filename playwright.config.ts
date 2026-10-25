@@ -21,14 +21,13 @@ export default defineConfig({
     env: {
       PGLITE_DIR: ".data/e2e-db",
       STORAGE_DIR: ".data/e2e-files",
-      OUTBOX_DIR: ".data/e2e-outbox",
+      MAILER: "log",
       APP_URL: `http://localhost:${PORT}`,
       BETTER_AUTH_SECRET: "e2e-secret-e2e-secret-e2e-secret-00",
       INBOUND_WEBHOOK_SECRET: "e2e-webhook-secret",
-      ADMIN_EMAILS: "admin@e2e.test",
-      // e2e runs a production build, where the mock payment provider is otherwise refused.
-      ALLOW_MOCK_PAYMENTS: "true",
-      // The tour signs in dozens of times from one IP, which the sign-in rate limit would (rightly) block.
+      ADMIN_EMAIL: "admin@e2e.test",
+      ADMIN_PASSWORD: "e2e-admin-password-1",
+      // The suite signs up and signs in dozens of times from one IP, which the rate limits would (rightly) block.
       RATE_LIMIT_DISABLED: "true",
     },
   },

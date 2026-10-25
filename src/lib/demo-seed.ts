@@ -14,6 +14,7 @@ import { incomeBand } from "@/lib/metrics/band";
 import { randomToken } from "@/lib/ids";
 
 import { DEMO_BUYER_EMAIL, DEMO_BUYER_ID, DEMO_PASSWORD, DEMO_SELLER_EMAIL, DEMO_SELLER_ID } from "@/lib/demo-seed-constants";
+import { and, count } from "drizzle-orm";
 const SELLER_ID = DEMO_SELLER_ID;
 
 const PALETTES = [
@@ -120,25 +121,48 @@ const demoUuid = (seed: string) => {
 
 const daysIn = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
 
-/** Credentials login for a demo user (Better Auth "credential" account). Only usable when DEMO_MODE=true. */
-async function upsertDemoUser(db: Db, u: { id: string; name: string; email: string; role: "seller" | "buyer" }) {
+/** A user; with `password` they can sign in with Better Auth's credential account, otherwise the account cannot log in. */
+async function upsertUser(db: Db, u: { id: string; name: string; email: string; role: "seller" | "buyer" | "admin"; password?: string }) {
   await db.insert(schema.users).values({ id: u.id, name: u.name, email: u.email, emailVerified: true, role: u.role }).onConflictDoNothing();
-  await db
-    .insert(schema.accounts)
-    .values({ id: `${u.id}-credential`, accountId: u.id, providerId: "credential", userId: u.id, password: await hashPassword(DEMO_PASSWORD) })
-    .onConflictDoNothing();
+  if (u.password) {
+    await db
+      .insert(schema.accounts)
+      .values({ id: `${u.id}-credential`, accountId: u.id, providerId: "credential", userId: u.id, password: await hashPassword(u.password) })
+      .onConflictDoNothing();
+  }
   await db.insert(schema.verifiedEmails).values({ userId: u.id, email: u.email, verifiedAt: new Date() }).onConflictDoNothing();
 }
 
-/** Seeds demo users and three clearly-marked DEMO properties with SYNTHETIC data. Idempotent (reseeds the demo listings). */
-export async function seedDemo(db: Db, storageAdapter: StorageAdapter): Promise<void> {
+const PROFILE_BASE = {
+  status: "verified" as const,
+  submittedAt: new Date(),
+  reviewedAt: new Date(),
+  reviewedBy: "seed",
+};
 
-  await upsertDemoUser(db, { id: DEMO_SELLER_ID, name: "Demo Seller", email: DEMO_SELLER_EMAIL, role: "seller" });
-  await upsertDemoUser(db, { id: DEMO_BUYER_ID, name: "Demo Buyer", email: DEMO_BUYER_EMAIL, role: "buyer" });
+/**
+ * Seeds demo users, three clearly-marked DEMO properties with SYNTHETIC data, and a few access
+ * requests so every screen has something to show. By default it does nothing when the demo already
+ * exists; `force` rebuilds the demo rows.
+ */
+export async function seedDemo(db: Db, storageAdapter: StorageAdapter, opts: { force?: boolean } = {}): Promise<void> {
+  const [existing] = await db.select({ n: count() }).from(schema.properties).where(and(eq(schema.properties.isDemo, true)));
+  if (!opts.force && Number(existing?.n ?? 0) >= DEMOS.length) return;
 
-  // Reseed: remove previous demo properties (cascades to photos, submissions, aggregates) and their files.
+  await upsertUser(db, { id: DEMO_SELLER_ID, name: "Demo Owner", email: DEMO_SELLER_EMAIL, role: "seller", password: DEMO_PASSWORD });
+  await upsertUser(db, { id: DEMO_BUYER_ID, name: "Demo Investor", email: DEMO_BUYER_EMAIL, role: "buyer", password: DEMO_PASSWORD });
+  // Extra investors who only exist to fill the owner's inbox; they have no password and cannot log in.
+  await upsertUser(db, { id: "demo-investor-rossi", name: "Daniele Rossi", email: "rossi@stayield.demo", role: "buyer" });
+  await upsertUser(db, { id: "demo-investor-levy", name: "Noa Levy", email: "levy@stayield.demo", role: "buyer" });
+
+  // Optional admin from the environment (never hard-coded or documented).
+  if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
+    await upsertUser(db, { id: "admin-user", name: "Admin", email: process.env.ADMIN_EMAIL.toLowerCase(), role: "admin", password: process.env.ADMIN_PASSWORD });
+  }
+
+  // Rebuild: remove previous demo properties (cascades to photos, submissions, aggregates, requests) and files.
   const old = await db.select({ id: schema.properties.id }).from(schema.properties).where(eq(schema.properties.isDemo, true));
-    for (const o of old) await storageAdapter.deletePrefix(`photos/${o.id}`);
+  for (const o of old) await storageAdapter.deletePrefix(`photos/${o.id}`);
   await db.delete(schema.properties).where(eq(schema.properties.isDemo, true));
 
   const now = new Date();
@@ -242,4 +266,51 @@ export async function seedDemo(db: Db, storageAdapter: StorageAdapter): Promise<
       .where(eq(schema.properties.id, prop.id));
   }
 
+
+  // ---- Investor profiles and requests -------------------------------------------------------
+  const profiles = [
+    {
+      userId: DEMO_BUYER_ID, fullName: "Demo Investor", phone: "+972 50 000 0000", investorType: "individual" as const, entityName: "", country: "Israel",
+      budgetMin: 300000, budgetMax: 600000, currency: "EUR", targetCountries: "Portugal, Greece", experience: "one_to_three" as const, financing: "mixed" as const, timeline: "three_months" as const,
+      about: "Looking for a second short-term-rental apartment in Southern Europe. I have run one Airbnb unit for three years and want verified numbers before I decide.", website: "",
+    },
+    {
+      userId: "demo-investor-rossi", fullName: "Daniele Rossi", phone: "+39 02 000 0000", investorType: "family_office" as const, entityName: "Rossi Family Office", country: "Italy",
+      budgetMin: 1000000, budgetMax: 2500000, currency: "USD", targetCountries: "Israel, Portugal", experience: "ten_plus" as const, financing: "cash" as const, timeline: "now" as const,
+      about: "We hold a portfolio of 14 income-producing apartments and are adding two more this year. Cash buyer, can move quickly once the numbers check out.", website: "https://example.com/rossi",
+    },
+    {
+      userId: "demo-investor-levy", fullName: "Noa Levy", phone: "+972 52 000 0000", investorType: "company" as const, entityName: "Levy Stays Ltd", country: "Israel",
+      budgetMin: 200000, budgetMax: 450000, currency: "EUR", targetCountries: "Greece", experience: "four_to_ten" as const, financing: "mortgage" as const, timeline: "six_to_twelve_months" as const,
+      about: "Small operator running seven short-term rentals in Tel Aviv. Interested in Athens for the strong summer season and a lower entry price.", website: "",
+    },
+  ];
+  for (const pr of profiles) await db.insert(schema.investorProfiles).values({ ...PROFILE_BASE, ...pr }).onConflictDoUpdate({ target: schema.investorProfiles.userId, set: { ...PROFILE_BASE, ...pr } });
+
+  const propBySlug = new Map((await db.select({ id: schema.properties.id, slug: schema.properties.publicSlug }).from(schema.properties).where(eq(schema.properties.isDemo, true))).map((r) => [r.slug, r.id]));
+  const mk = async (slug: string, investorId: string, status: "pending" | "approved" | "info_requested", thread: { by: "investor" | "owner"; kind: "request" | "question" | "answer" | "note"; body: string }[]) => {
+    const propertyId = propBySlug.get(slug)!;
+    const [r] = await db
+      .insert(schema.accessRequests)
+      .values({ propertyId, investorId, status, decidedAt: status === "approved" ? new Date() : null, sellerUnseen: status === "pending", investorUnseen: status !== "pending" })
+      .returning({ id: schema.accessRequests.id });
+    for (const [i, m] of thread.entries()) {
+      await db.insert(schema.requestMessages).values({
+        requestId: r.id, authorId: m.by === "investor" ? investorId : DEMO_SELLER_ID, authorRole: m.by, kind: m.kind, body: m.body,
+        createdAt: new Date(Date.now() - (thread.length - i) * 3600_000),
+      });
+    }
+  };
+  // The demo investor: already approved for Lisbon (sees it in full), waiting on Tel Aviv, nothing yet for Athens.
+  await mk("demo-lisbon-alfama", DEMO_BUYER_ID, "approved", [
+    { by: "investor", kind: "request", body: "Hello, I would like to see the full numbers for this apartment. I run a similar unit and can visit in November." },
+    { by: "owner", kind: "note", body: "Welcome. Happy to share the full report and details." },
+  ]);
+  await mk("demo-tel-aviv-florentin", DEMO_BUYER_ID, "pending", [{ by: "investor", kind: "request", body: "Interested in the Florentin apartment. Could you share the full report?" }]);
+  // The owner's inbox: a family office asking about Tel Aviv, and an operator who was asked a question about Lisbon.
+  await mk("demo-tel-aviv-florentin", "demo-investor-rossi", "pending", [{ by: "investor", kind: "request", body: "We are a cash buyer and would like the full report and the building details before we fly in." }]);
+  await mk("demo-lisbon-alfama", "demo-investor-levy", "info_requested", [
+    { by: "investor", kind: "request", body: "Please share the full report for Alfama." },
+    { by: "owner", kind: "question", body: "Thanks. Could you tell me whether you plan to run it yourself or through a manager, and your expected closing date?" },
+  ]);
 }

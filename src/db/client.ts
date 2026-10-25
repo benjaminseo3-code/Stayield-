@@ -1,4 +1,5 @@
 import "server-only";
+import fs from "node:fs";
 import path from "node:path";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle as drizzlePglite } from "drizzle-orm/pglite";
@@ -14,13 +15,18 @@ export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 const MIGRATIONS = path.join(process.cwd(), "drizzle");
 
 /**
- * Public demo deployments (DEMO_MODE=true) start from an empty in-memory database, so the demo
- * accounts and listings are created on first use. Never runs otherwise.
+ * TLS for hosted Postgres. Verified against the Supabase CA bundled in /certs; set
+ * DATABASE_SSL=no-verify only as a last resort, or DATABASE_SSL=disable for a local server.
  */
-async function seedIfDemo(db: Db): Promise<void> {
-  if (process.env.DEMO_MODE !== "true") return;
-  const [{ seedDemo }, { getStorage }] = await Promise.all([import("@/lib/demo-seed"), import("@/adapters")]);
-  await seedDemo(db, getStorage());
+function sslFor(url: string) {
+  const mode = process.env.DATABASE_SSL;
+  if (mode === "disable" || /sslmode=disable/.test(url) || /@(localhost|127\.0\.0\.1)[:/]/.test(url)) return undefined;
+  if (mode === "no-verify") return { rejectUnauthorized: false };
+  try {
+    return { ca: fs.readFileSync(path.join(process.cwd(), "certs", "supabase-prod-ca-2021.crt"), "utf8"), rejectUnauthorized: true };
+  } catch {
+    return { rejectUnauthorized: true };
+  }
 }
 
 type Handle = { db: Db; ready: Promise<void>; close: () => Promise<void> };
@@ -28,11 +34,12 @@ type Handle = { db: Db; ready: Promise<void>; close: () => Promise<void> };
 function open(): Handle {
   const url = process.env.DATABASE_URL;
   if (url) {
-    const pool = new Pool({ connectionString: url });
+    // Small pool: serverless instances are many and short-lived, and Supabase's pooler multiplexes.
+    const pool = new Pool({ connectionString: url, max: Number(process.env.DATABASE_POOL_MAX ?? 3), idleTimeoutMillis: 10_000, ssl: sslFor(url) });
     const db = drizzlePg(pool, { schema });
     return {
       db,
-      ready: migratePg(db, { migrationsFolder: MIGRATIONS }),
+      ready: migratePg(db, { migrationsFolder: MIGRATIONS, migrationsSchema: "stayield" }),
       close: () => pool.end(),
     };
   }
@@ -42,7 +49,7 @@ function open(): Handle {
   const db = drizzlePglite(client, { schema });
   return {
     db,
-    ready: migratePglite(db, { migrationsFolder: MIGRATIONS }).then(() => seedIfDemo(db)),
+    ready: migratePglite(db, { migrationsFolder: MIGRATIONS, migrationsSchema: "stayield" }),
     close: () => client.close(),
   };
 }

@@ -31,14 +31,58 @@ export function canViewTeaser(actor: Actor, p: PropertyRef): boolean {
 }
 
 /**
- * Monthly aggregates (the paid report). Owner and admin always; a buyer only after unlocking.
- * An unlock is permanent: it keeps working if the seller later unpublishes the listing, and ends
- * only when the seller deletes the data (the rows cascade away).
+ * Full listing detail (real photos, price, location, description, income, the monthly report).
+ * Owner and admin always. An investor only while the listing is live AND the owner has approved
+ * their access request. Everyone else gets the blurred, redacted public view.
  */
-export function canViewReport(actor: Actor, p: PropertyRef, hasUnlock: boolean): boolean {
+export function canViewFull(actor: Actor, p: PropertyRef, hasApprovedAccess: boolean): boolean {
   if (!actor) return false;
   if (isOwner(actor, p) || isAdmin(actor)) return true;
-  return hasUnlock;
+  return hasApprovedAccess && p.status === "live";
+}
+
+/** The monthly report follows the same rule as full detail. */
+export const canViewReport = canViewFull;
+
+export type InvestorStatus = "draft" | "submitted" | "verified" | "suspended";
+export const COOLDOWN_AFTER_DECLINE_MS = 7 * 24 * 3600_000;
+
+/**
+ * An investor may ask for access when: signed in as a non-owner buyer, the listing is live, their
+ * profile is submitted (or verified, and not suspended), no request is already active, and a
+ * declined request is older than the cool-down.
+ */
+export function canRequestAccess(
+  actor: Actor,
+  p: PropertyRef,
+  ctx: { profileStatus: InvestorStatus | null; hasActiveRequest: boolean; lastDeclinedAt?: Date | null },
+  now = Date.now(),
+): boolean {
+  if (!actor || actor.role !== "buyer") return false;
+  if (p.status !== "live" || isOwner(actor, p)) return false;
+  if (ctx.profileStatus !== "submitted" && ctx.profileStatus !== "verified") return false;
+  if (ctx.hasActiveRequest) return false;
+  if (ctx.lastDeclinedAt && now - ctx.lastDeclinedAt.getTime() < COOLDOWN_AFTER_DECLINE_MS) return false;
+  return true;
+}
+
+/** Only the owner of the listing decides on requests for it. */
+export function canDecideRequest(actor: Actor, p: PropertyRef): boolean {
+  return isOwner(actor, p);
+}
+
+/**
+ * The investor's profile: themselves and admins always; the owner of a listing the investor asked
+ * about. Phone and email are shared with the owner only once the request is approved.
+ */
+export function canViewInvestorProfile(actor: Actor, investorId: string, ownsRequestedListing: boolean): boolean {
+  if (!actor) return false;
+  return actor.id === investorId || isAdmin(actor) || ownsRequestedListing;
+}
+
+export function canViewInvestorContact(actor: Actor, investorId: string, ownsApprovedListing: boolean): boolean {
+  if (!actor) return false;
+  return actor.id === investorId || isAdmin(actor) || ownsApprovedListing;
 }
 
 /**
@@ -56,12 +100,6 @@ export function canViewRawSubmission(actor: Actor): boolean {
 
 export function canEditProperty(actor: Actor, p: PropertyRef): boolean {
   return isOwner(actor, p) || isAdmin(actor);
-}
-
-/** A buyer may unlock a live listing they do not own. */
-export function canUnlock(actor: Actor, p: PropertyRef): boolean {
-  if (!actor || p.status !== "live") return false;
-  return !isOwner(actor, p);
 }
 
 export function canModerate(actor: Actor): boolean {

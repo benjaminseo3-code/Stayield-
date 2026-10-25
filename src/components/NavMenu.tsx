@@ -6,7 +6,7 @@ import { useState } from "react";
 import { useT } from "@/i18n/client";
 import { LangToggle } from "./LangToggle";
 
-export type NavItem = { href: string; label: string };
+export type NavItem = { href: string; label: string; badge?: number; primary?: boolean };
 
 /** Desktop nav + mobile hamburger panel. Items are resolved on the server. */
 export function NavMenu({ items }: { items: NavItem[] }) {
@@ -22,8 +22,9 @@ export function NavMenu({ items }: { items: NavItem[] }) {
     <>
       <nav className="nav" aria-label="Main">
         {items.map((i) => (
-          <Link key={i.href} href={i.href} aria-current={isCurrent(i.href) ? "page" : undefined}>
+          <Link key={i.href} href={i.href} aria-current={isCurrent(i.href) ? "page" : undefined} className={i.primary ? "btn btn-primary sm" : undefined} style={i.primary ? { color: "var(--navy)" } : undefined}>
             {i.label}
+            {!!i.badge && <span className="badge-count" aria-label={`${i.badge}`} data-testid="nav-badge">{i.badge}</span>}
           </Link>
         ))}
         <LangToggle />
@@ -42,6 +43,7 @@ export function NavMenu({ items }: { items: NavItem[] }) {
           {items.map((i) => (
             <Link key={i.href} href={i.href}>
               {i.label}
+              {!!i.badge && <span className="badge-count">{i.badge}</span>}
             </Link>
           ))}
           <div>

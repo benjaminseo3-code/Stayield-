@@ -1,6 +1,7 @@
-import { asc, and, eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import type { Db } from "@/db/client";
-import { monthlyAggregates, properties, unlocks } from "@/db/schema";
+import { monthlyAggregates, properties } from "@/db/schema";
+import { hasApprovedAccess } from "@/lib/access";
 import { canViewReport, ForbiddenError, type Actor } from "@/lib/policies";
 
 export type ReportRow = {
@@ -21,16 +22,6 @@ export type ReportData = {
   rows: ReportRow[];
 };
 
-export async function hasUnlock(db: Db, actor: Actor, propertyId: string): Promise<boolean> {
-  if (!actor) return false;
-  const [row] = await db
-    .select({ id: unlocks.id })
-    .from(unlocks)
-    .where(and(eq(unlocks.buyerId, actor.id), eq(unlocks.propertyId, propertyId)))
-    .limit(1);
-  return !!row;
-}
-
 /**
  * The only function that reads `monthly_aggregates` for display. Throws ForbiddenError unless the
  * policy allows it, so a forgotten check elsewhere cannot leak the report.
@@ -49,7 +40,7 @@ export async function getReport(db: Db, actor: Actor, propertyId: string): Promi
     .where(eq(properties.id, propertyId))
     .limit(1);
   if (!p) throw new ForbiddenError("not found");
-  if (!canViewReport(actor, p, await hasUnlock(db, actor, propertyId))) throw new ForbiddenError();
+  if (!canViewReport(actor, p, await hasApprovedAccess(db, actor?.id, propertyId))) throw new ForbiddenError();
 
   const rows = await db
     .select({

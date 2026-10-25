@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@electric-sql/pglite", "sharp", "mailparser", "mailauth", "pg"],
   poweredByHeader: false,
   // The migrator reads ./drizzle at runtime via process.cwd(); make sure it ships with every function.
-  outputFileTracingIncludes: { "/**": ["./drizzle/**/*"] },
+  outputFileTracingIncludes: { "/**": ["./drizzle/**/*", "./certs/**/*"] },
   images: { unoptimized: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

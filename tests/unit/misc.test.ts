@@ -1,10 +1,8 @@
-import { createHmac } from "node:crypto";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { LocalStorage } from "@/adapters/local/storage";
-import { verifyStripeSignature } from "@/adapters/payments";
 import { incomeBand } from "@/lib/metrics/band";
 import { detectLang, makeT } from "@/i18n";
 import { en } from "@/i18n/en";
@@ -42,27 +40,6 @@ describe("LocalStorage", () => {
     await expect(s.get("a/../../evil")).rejects.toThrow();
     await s.deletePrefix("a");
     expect(await s.exists("a/b.txt")).toBe(false);
-  });
-});
-
-describe("verifyStripeSignature", () => {
-  const secret = "whsec_test";
-  const payload = JSON.stringify({ type: "checkout.session.completed", data: { object: { id: "cs_1" } } });
-  const sign = (t: number, body = payload) =>
-    `t=${t},v1=${createHmac("sha256", secret).update(`${t}.${body}`).digest("hex")}`;
-
-  it("accepts a valid signature", () => {
-    const now = Date.now();
-    expect(verifyStripeSignature(payload, sign(Math.floor(now / 1000)), secret, now).type).toBe(
-      "checkout.session.completed",
-    );
-  });
-  it("rejects tampering, stale timestamps and missing headers (fail closed)", () => {
-    const now = Date.now();
-    const t = Math.floor(now / 1000);
-    expect(() => verifyStripeSignature(payload + " ", sign(t), secret, now)).toThrow();
-    expect(() => verifyStripeSignature(payload, sign(t - 3600), secret, now)).toThrow();
-    expect(() => verifyStripeSignature(payload, null, secret, now)).toThrow();
   });
 });
 

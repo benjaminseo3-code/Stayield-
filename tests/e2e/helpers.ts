@@ -1,39 +1,51 @@
-import fs from "node:fs";
-import path from "node:path";
 import sharp from "sharp";
-import type { BrowserContext, Page } from "@playwright/test";
+import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { synthRows, toCsv } from "../helpers/synthetic";
 
 export const BASE = "http://localhost:3100";
-const OUTBOX = path.join(process.cwd(), ".data", "e2e-outbox");
+export const PASSWORD = "Test-password-123";
+export const DEMO = { owner: "seller@stayield.demo", investor: "buyer@stayield.demo", password: "Stayield-Demo-2026" };
+export const ADMIN = { email: "admin@e2e.test", password: "e2e-admin-password-1" };
 
 export const uniqueEmail = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@e2e.test`;
 
-/** The newest sign-in link emailed to `email` (read from the dev outbox directory). */
-export function latestMagicLink(email: string): string {
-  const files = fs.existsSync(OUTBOX) ? fs.readdirSync(OUTBOX).filter((f) => f.endsWith(".json")).sort().reverse() : [];
-  for (const f of files) {
-    const mail = JSON.parse(fs.readFileSync(path.join(OUTBOX, f), "utf8")) as { to: string; text: string; subject: string };
-    if (mail.to !== email || !/Sign in/i.test(mail.subject)) continue;
-    const m = mail.text.match(/https?:\/\/\S+magic-link\/verify\S+/);
-    if (m) return m[0];
-  }
-  throw new Error(`no magic link for ${email}`);
-}
-
-export async function signIn(page: Page, email: string, next = "/"): Promise<void> {
-  await page.goto(`/sign-in?next=${encodeURIComponent(next)}`);
-  await page.getByLabel(/email address|כתובת מייל/i).fill(email);
-  await page.locator("form button[type=submit]").click();
-  await page.waitForURL(/\/sign-in\/sent/);
-  await page.goto(latestMagicLink(email));
-  await page.waitForLoadState("load");
-}
-
-export async function newContext(browser: import("@playwright/test").Browser, opts: { lang?: "en" | "he"; width?: number; height?: number } = {}): Promise<BrowserContext> {
+export async function newContext(browser: Browser, opts: { lang?: "en" | "he"; width?: number; height?: number } = {}): Promise<BrowserContext> {
   const ctx = await browser.newContext({ baseURL: BASE, viewport: { width: opts.width ?? 1280, height: opts.height ?? 900 } });
   await ctx.addCookies([{ name: "lang", value: opts.lang ?? "en", url: BASE }]);
   return ctx;
+}
+
+export async function login(page: Page, email: string, password: string, next = "/"): Promise<void> {
+  await page.goto(`/sign-in?next=${encodeURIComponent(next)}`);
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(password);
+  await page.getByTestId("signin-submit").click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/sign-in"));
+}
+
+/** Creates an account through the real sign-up form. Investors land on the verification page, owners on /sell. */
+export async function signUp(page: Page, role: "buyer" | "seller", opts: { name?: string; email?: string; next?: string } = {}): Promise<string> {
+  const email = opts.email ?? uniqueEmail(role === "buyer" ? "investor" : "owner");
+  await page.goto(`/sign-up?role=${role}${opts.next ? `&next=${encodeURIComponent(opts.next)}` : ""}`);
+  await page.getByTestId(`role-${role}`).check();
+  await page.locator("#name").fill(opts.name ?? (role === "buyer" ? "Test Investor" : "Test Owner"));
+  await page.locator("#email").fill(email);
+  await page.locator("#password").fill(PASSWORD);
+  await page.getByTestId("signup-submit").click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/sign-up"));
+  return email;
+}
+
+export async function fillProfile(page: Page, opts: { name?: string } = {}): Promise<void> {
+  await page.goto("/account/verification");
+  await page.locator("#fullName").fill(opts.name ?? "Test Investor");
+  await page.locator("#phone").fill("+972 50 123 4567");
+  await page.locator("#country").fill("Israel");
+  await page.locator("#budgetMin").fill("250000");
+  await page.locator("#budgetMax").fill("450000");
+  await page.locator("#targetCountries").fill("Portugal, Greece");
+  await page.locator("#about").fill("I run two short-term rentals in Tel Aviv and want one more in Southern Europe with verified numbers.");
+  await page.getByTestId("profile-submit").click();
 }
 
 export const jpeg = (w = 1200, h = 800, color = "#336699") => sharp({ create: { width: w, height: h, channels: 3, background: color } }).jpeg().toBuffer();
@@ -44,4 +56,10 @@ export function reportCsv(opts: { duplicate?: boolean } = {}): string {
   const rows = synthRows(start, 64);
   if (opts.duplicate) rows.push(rows[10]);
   return toCsv(rows);
+}
+
+/** Photo ids on a listing page (the blurred or sharp ones, whichever the viewer was given). */
+export async function photoIds(page: Page): Promise<string[]> {
+  const srcs = await page.locator("img[src^='/api/photos/']").evaluateAll((els) => els.map((e) => (e as HTMLImageElement).getAttribute("src") ?? ""));
+  return [...new Set(srcs.map((s) => s.split("/")[3]))];
 }

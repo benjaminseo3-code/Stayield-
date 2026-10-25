@@ -4,12 +4,12 @@ import { notFound } from "next/navigation";
 import { moderate } from "@/app/actions/admin";
 import { ChecksList } from "@/components/report/ChecksList";
 import { ReportView } from "@/components/report/ReportView";
-import { TeaserSection } from "@/components/TeaserSection";
+import { ListingView } from "@/components/ListingView";
 import { getDb } from "@/db/client";
 import { dataSubmissions, properties, users } from "@/db/schema";
 import { getT } from "@/i18n/server";
 import { getReport } from "@/lib/data/report";
-import { getTeaserBySlug } from "@/lib/data/teaser";
+import { getListingBySlug } from "@/lib/data/listings";
 import { canViewRawSubmission } from "@/lib/policies";
 import { requireAdmin } from "@/lib/session";
 
@@ -25,7 +25,7 @@ export default async function AdminProperty({ params }: { params: Promise<{ id: 
   if (!p) notFound();
   const [owner] = await db.select({ email: users.email }).from(users).where(eq(users.id, p.ownerId)).limit(1);
   const [sub] = p.activeSubmissionId ? await db.select().from(dataSubmissions).where(eq(dataSubmissions.id, p.activeSubmissionId)).limit(1) : [];
-  const teaser = await getTeaserBySlug(db, admin, p.publicSlug);
+  const teaser = await getListingBySlug(db, admin, p.publicSlug);
   const report = sub ? await getReport(db, admin, p.id) : null;
   // Raw evidence (headers, DKIM details) is admin-only by policy.
   const showEvidence = canViewRawSubmission(admin);
@@ -71,7 +71,7 @@ export default async function AdminProperty({ params }: { params: Promise<{ id: 
           <ChecksList checks={sub?.verificationResult?.checks ?? []} />
         </section>
 
-        {teaser && <TeaserSection p={teaser} />}
+        {teaser && <ListingView l={teaser} />}
         {report?.trustTier && <ReportView rows={report.rows} tier={report.trustTier} notes={p.reviewReasons} />}
       </div>
     </div>

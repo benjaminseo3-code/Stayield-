@@ -39,6 +39,7 @@ describe("photo service", () => {
     expect(await storage.exists(`${p.storageKey}/full.webp`)).toBe(true);
     expect(await storage.exists(`${p.storageKey}/full.jpg`)).toBe(true);
     expect(await storage.exists(`${p.storageKey}/thumb.webp`)).toBe(true);
+    expect(await storage.exists(`${p.storageKey}/blur.webp`)).toBe(true);
   });
 
   it("rejects non-images and enforces the 30 photo limit", async () => {

@@ -7,4 +7,3 @@ export function appUrl(): string {
   return "http://localhost:3000";
 }
 
-export const isDemoMode = () => process.env.DEMO_MODE === "true";

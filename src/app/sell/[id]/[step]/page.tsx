@@ -6,13 +6,13 @@ import { dataSubmissions, inboundAddresses, propertyPhotos, verifiedEmails } fro
 import { config } from "@/lib/config";
 import { getT } from "@/i18n/server";
 import { ReportView } from "@/components/report/ReportView";
-import { TeaserSection } from "@/components/TeaserSection";
+import { ListingView } from "@/components/ListingView";
 import { BasicsForm } from "@/components/wizard/BasicsForm";
 import { DataStep } from "@/components/wizard/DataStep";
 import { PhotosManager } from "@/components/wizard/PhotosManager";
 import { PublishForm } from "@/components/wizard/PublishForm";
 import { MAX_PHOTOS, MAX_PHOTO_BYTES } from "@/lib/photos-constants";
-import { getTeaserBySlug } from "@/lib/data/teaser";
+import { getListingBySlug } from "@/lib/data/listings";
 import { getReport } from "@/lib/data/report";
 import { loadEditableProperty, requireSeller } from "@/lib/session";
 
@@ -83,7 +83,7 @@ export default async function WizardStep({ params }: { params: Promise<{ id: str
       </>
     );
   } else if (current === "preview") {
-    const teaser = await getTeaserBySlug(db, user, property.publicSlug);
+    const teaser = await getListingBySlug(db, user, property.publicSlug);
     const hasData = !!property.activeSubmissionId;
     const report = hasData ? await getReport(db, user, id) : null;
     body = (
@@ -91,7 +91,7 @@ export default async function WizardStep({ params }: { params: Promise<{ id: str
         <p className="muted">{t("preview.sub")}</p>
         <section aria-labelledby="pv-teaser">
           <h2 id="pv-teaser" style={{ fontSize: "1.3rem" }}>{t("preview.teaser")}</h2>
-          {teaser && <TeaserSection p={teaser} />}
+          {teaser && <ListingView l={teaser} />}
         </section>
         <section aria-labelledby="pv-report">
           <h2 id="pv-report" style={{ fontSize: "1.3rem" }}>{t("preview.report")}</h2>

@@ -1,24 +1,32 @@
 import { sql } from "drizzle-orm";
 import {
   bigint,
+  customType,
   boolean,
   date,
   index,
   integer,
   jsonb,
-  pgEnum,
-  pgTable,
+  pgSchema,
   text,
   timestamp,
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
+/**
+ * Everything lives in its own Postgres schema so Stayield can share a database (e.g. a Supabase
+ * project) with other apps without touching their `public` tables. The schema is not exposed by
+ * Supabase's Data API.
+ */
+export const app = pgSchema("stayield");
+
+
 // ---------------------------------------------------------------------------
 // Enums
 // ---------------------------------------------------------------------------
-export const userRole = pgEnum("user_role", ["seller", "buyer", "admin"]);
-export const propertyStatus = pgEnum("property_status", [
+export const userRole = app.enum("user_role", ["seller", "buyer", "admin"]);
+export const propertyStatus = app.enum("property_status", [
   "draft",
   "data_pending",
   "review",
@@ -26,9 +34,9 @@ export const propertyStatus = pgEnum("property_status", [
   "unpublished",
 ]);
 /** Trust tiers are always visible to buyers. `api_verified` is reserved (Hospitable Connect, later). */
-export const trustTier = pgEnum("trust_tier", ["signed_email", "self_reported", "api_verified"]);
-export const submissionSource = pgEnum("submission_source", ["signed_email", "csv_upload", "api"]);
-export const submissionStatus = pgEnum("submission_status", [
+export const trustTier = app.enum("trust_tier", ["signed_email", "self_reported", "api_verified"]);
+export const submissionSource = app.enum("submission_source", ["signed_email", "csv_upload", "api"]);
+export const submissionStatus = app.enum("submission_status", [
   "received",
   "verifying",
   "verified",
@@ -36,8 +44,22 @@ export const submissionStatus = pgEnum("submission_status", [
   "failed",
   "rejected",
 ]);
-export const reservationStatus = pgEnum("reservation_status", ["confirmed", "canceled"]);
-export const paymentStatus = pgEnum("payment_status", ["pending", "succeeded", "failed", "refunded"]);
+export const reservationStatus = app.enum("reservation_status", ["confirmed", "canceled"]);
+export const investorStatus = app.enum("investor_status", ["draft", "submitted", "verified", "suspended"]);
+export const investorType = app.enum("investor_type", ["individual", "family_office", "company", "fund"]);
+export const investorExperience = app.enum("investor_experience", ["first_time", "one_to_three", "four_to_ten", "ten_plus"]);
+export const investorFinancing = app.enum("investor_financing", ["cash", "mortgage", "mixed"]);
+export const investorTimeline = app.enum("investor_timeline", ["now", "three_months", "six_to_twelve_months", "exploring"]);
+export const accessStatus = app.enum("access_status", ["pending", "info_requested", "approved", "declined", "withdrawn", "revoked"]);
+export const messageAuthor = app.enum("message_author", ["investor", "owner"]);
+export const messageKind = app.enum("message_kind", ["request", "question", "answer", "note"]);
+
+/** Postgres bytea as a Node Buffer (node-postgres returns Buffer, PGlite a Uint8Array). */
+const bytea = customType<{ data: Buffer; driverData: Buffer | Uint8Array }>({
+  dataType: () => "bytea",
+  toDriver: (v) => v,
+  fromDriver: (v) => Buffer.from(v),
+});
 
 const createdAt = () => timestamp("created_at", { withTimezone: true }).notNull().defaultNow();
 const updatedAt = () =>
@@ -52,7 +74,7 @@ const money = (name: string) => bigint(name, { mode: "number" });
 // ---------------------------------------------------------------------------
 // Auth tables (shape required by Better Auth's Drizzle adapter)
 // ---------------------------------------------------------------------------
-export const users = pgTable("users", {
+export const users = app.table("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull().default(""),
   email: text("email").notNull().unique(),
@@ -63,7 +85,7 @@ export const users = pgTable("users", {
   updatedAt: updatedAt(),
 });
 
-export const sessions = pgTable(
+export const sessions = app.table(
   "sessions",
   {
     id: text("id").primaryKey(),
@@ -80,7 +102,7 @@ export const sessions = pgTable(
   (t) => [index("sessions_user_idx").on(t.userId)],
 );
 
-export const accounts = pgTable(
+export const accounts = app.table(
   "accounts",
   {
     id: text("id").primaryKey(),
@@ -102,7 +124,7 @@ export const accounts = pgTable(
   (t) => [index("accounts_user_idx").on(t.userId)],
 );
 
-export const verifications = pgTable("verifications", {
+export const verifications = app.table("verifications", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
@@ -114,7 +136,7 @@ export const verifications = pgTable("verifications", {
 // ---------------------------------------------------------------------------
 // Domain tables
 // ---------------------------------------------------------------------------
-export const properties = pgTable(
+export const properties = app.table(
   "properties",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -166,7 +188,7 @@ export type ReviewReason = {
   params?: Record<string, string | number>;
 };
 
-export const propertyPhotos = pgTable(
+export const propertyPhotos = app.table(
   "property_photos",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -185,7 +207,7 @@ export const propertyPhotos = pgTable(
   (t) => [index("photos_property_idx").on(t.propertyId, t.position)],
 );
 
-export const dataSubmissions = pgTable(
+export const dataSubmissions = app.table(
   "data_submissions",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -224,7 +246,7 @@ export type VerificationResult = {
   dkim?: { domain: string; selector: string; result: string };
 };
 
-export const reservations = pgTable(
+export const reservations = app.table(
   "reservations",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -252,7 +274,7 @@ export const reservations = pgTable(
   ],
 );
 
-export const monthlyAggregates = pgTable(
+export const monthlyAggregates = app.table(
   "monthly_aggregates",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -274,46 +296,7 @@ export const monthlyAggregates = pgTable(
   (t) => [uniqueIndex("aggregates_property_month_uidx").on(t.propertyId, t.month)],
 );
 
-export const payments = pgTable(
-  "payments",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    buyerId: text("buyer_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "restrict" }),
-    propertyId: uuid("property_id")
-      .notNull()
-      .references(() => properties.id, { onDelete: "restrict" }),
-    provider: text("provider").notNull(),
-    providerRef: text("provider_ref"),
-    amountMinor: money("amount_minor").notNull(),
-    currency: text("currency").notNull(),
-    status: paymentStatus("status").notNull().default("pending"),
-    createdAt: createdAt(),
-    completedAt: timestamp("completed_at", { withTimezone: true }),
-  },
-  (t) => [index("payments_buyer_idx").on(t.buyerId)],
-);
-
-export const unlocks = pgTable(
-  "unlocks",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    buyerId: text("buyer_id")
-      .notNull()
-      .references(() => users.id, { onDelete: "cascade" }),
-    propertyId: uuid("property_id")
-      .notNull()
-      .references(() => properties.id, { onDelete: "cascade" }),
-    paymentId: uuid("payment_id")
-      .notNull()
-      .references(() => payments.id, { onDelete: "restrict" }),
-    createdAt: createdAt(),
-  },
-  (t) => [uniqueIndex("unlocks_buyer_property_uidx").on(t.buyerId, t.propertyId)],
-);
-
-export const savedProperties = pgTable(
+export const savedProperties = app.table(
   "saved_properties",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -328,19 +311,96 @@ export const savedProperties = pgTable(
   (t) => [uniqueIndex("saved_buyer_property_uidx").on(t.buyerId, t.propertyId)],
 );
 
-export const introRequests = pgTable("intro_requests", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  buyerId: text("buyer_id")
-    .notNull()
+/**
+ * Investor profile ("advanced verification"). Owners of a property an investor asked about see it
+ * (contact details only after approval). `status` gates sending access requests.
+ */
+export const investorProfiles = app.table("investor_profiles", {
+  userId: text("user_id")
+    .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
-  propertyId: uuid("property_id")
-    .notNull()
-    .references(() => properties.id, { onDelete: "cascade" }),
-  message: text("message").notNull().default(""),
+  status: investorStatus("status").notNull().default("draft"),
+  fullName: text("full_name").notNull().default(""),
+  phone: text("phone").notNull().default(""),
+  investorType: investorType("investor_type"),
+  entityName: text("entity_name").notNull().default(""),
+  country: text("country").notNull().default(""),
+  /** Whole units of `currency`, not minor units: this is a self-declared range, not money we move. */
+  budgetMin: bigint("budget_min", { mode: "number" }),
+  budgetMax: bigint("budget_max", { mode: "number" }),
+  currency: text("currency").notNull().default("USD"),
+  targetCountries: text("target_countries").notNull().default(""),
+  experience: investorExperience("experience"),
+  financing: investorFinancing("financing"),
+  timeline: investorTimeline("timeline"),
+  about: text("about").notNull().default(""),
+  website: text("website").notNull().default(""),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewedBy: text("reviewed_by"),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+/**
+ * An investor asking to see one listing in full. At most one ACTIVE request (pending, info_requested
+ * or approved) per investor and listing; declined/withdrawn/revoked ones stay as history.
+ */
+export const accessRequests = app.table(
+  "access_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    propertyId: uuid("property_id")
+      .notNull()
+      .references(() => properties.id, { onDelete: "cascade" }),
+    investorId: text("investor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: accessStatus("status").notNull().default("pending"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    /** New activity the owner / the investor has not looked at yet (drives the nav badges). */
+    sellerUnseen: boolean("seller_unseen").notNull().default(true),
+    investorUnseen: boolean("investor_unseen").notNull().default(false),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    index("access_requests_property_idx").on(t.propertyId, t.status),
+    index("access_requests_investor_idx").on(t.investorId, t.status),
+    uniqueIndex("access_requests_active_uidx")
+      .on(t.propertyId, t.investorId)
+      .where(sql`${t.status} in ('pending', 'info_requested', 'approved')`),
+  ],
+);
+
+export const requestMessages = app.table(
+  "request_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    requestId: uuid("request_id")
+      .notNull()
+      .references(() => accessRequests.id, { onDelete: "cascade" }),
+    authorId: text("author_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    /** Who wrote it, from the request's point of view. */
+    authorRole: messageAuthor("author_role").notNull(),
+    kind: messageKind("kind").notNull(),
+    body: text("body").notNull().default(""),
+    createdAt: createdAt(),
+  },
+  (t) => [index("request_messages_request_idx").on(t.requestId, t.createdAt)],
+);
+
+/** Database-backed file storage (photos, evidence) for deployments without a writable disk. */
+export const storageObjects = app.table("storage_objects", {
+  key: text("key").primaryKey(),
+  contentType: text("content_type").notNull().default("application/octet-stream"),
+  data: bytea("data").notNull(),
   createdAt: createdAt(),
 });
 
-export const consents = pgTable("consents", {
+export const consents = app.table("consents", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: text("user_id")
     .notNull()
@@ -354,7 +414,7 @@ export const consents = pgTable("consents", {
   acceptedAt: timestamp("accepted_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const inboundAddresses = pgTable("inbound_addresses", {
+export const inboundAddresses = app.table("inbound_addresses", {
   id: uuid("id").primaryKey().defaultRandom(),
   propertyId: uuid("property_id")
     .notNull()
@@ -364,7 +424,7 @@ export const inboundAddresses = pgTable("inbound_addresses", {
   createdAt: createdAt(),
 });
 
-export const verifiedEmails = pgTable(
+export const verifiedEmails = app.table(
   "verified_emails",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -381,7 +441,7 @@ export const verifiedEmails = pgTable(
   (t) => [uniqueIndex("verified_emails_user_email_uidx").on(t.userId, t.email)],
 );
 
-export const auditLog = pgTable(
+export const auditLog = app.table(
   "audit_log",
   {
     id: uuid("id").primaryKey().defaultRandom(),
@@ -401,3 +461,8 @@ export type NewProperty = typeof properties.$inferInsert;
 export type PropertyPhoto = typeof propertyPhotos.$inferSelect;
 export type DataSubmission = typeof dataSubmissions.$inferSelect;
 export type MonthlyAggregate = typeof monthlyAggregates.$inferSelect;
+
+export type InvestorProfile = typeof investorProfiles.$inferSelect;
+export type AccessRequest = typeof accessRequests.$inferSelect;
+export type RequestMessage = typeof requestMessages.$inferSelect;
+export type AccessStatus = (typeof accessStatus.enumValues)[number];

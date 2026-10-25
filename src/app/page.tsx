@@ -2,14 +2,15 @@ import Link from "next/link";
 import { PropertyCard } from "@/components/PropertyCard";
 import { getDb } from "@/db/client";
 import { getT } from "@/i18n/server";
-import { listLiveTeasers } from "@/lib/data/teaser";
+import { listLiveListings } from "@/lib/data/listings";
+import { currentUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
   const { t } = await getT();
   const steps = [1, 2, 3] as const;
-  const featured = (await listLiveTeasers(await getDb())).slice(0, 3);
+  const featured = (await listLiveListings(await getDb(), await currentUser())).slice(0, 3);
   return (
     <>
       <section className="hero">

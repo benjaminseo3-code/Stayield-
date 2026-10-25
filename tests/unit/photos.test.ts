@@ -30,6 +30,10 @@ describe("photo pipeline", () => {
       expect(buf.toString("latin1")).not.toContain("secret-copyright");
     }
     expect((await sharp(res.photo.thumb).metadata()).width).toBe(640);
+    // The public variant is tiny: colour and mood only, no recognisable detail.
+    const blurMeta = await sharp(res.photo.blur).metadata();
+    expect(blurMeta.width).toBeLessThanOrEqual(32);
+    expect(res.photo.blur.length).toBeLessThan(2000);
   });
 
   it("does not enlarge small images", async () => {

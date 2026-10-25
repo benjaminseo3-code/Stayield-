@@ -5,7 +5,9 @@ export { MAX_PHOTOS, MAX_PHOTO_BYTES } from "./photos-constants";
 import { MAX_PHOTO_BYTES } from "./photos-constants";
 export const MAX_DIMENSION = 2400;
 export const THUMB_WIDTH = 640;
-export const VARIANTS = ["full.webp", "full.jpg", "thumb.webp"] as const;
+/** `blur.webp` is the only variant shown to viewers who have no access: tiny and blurred at the source. */
+export const VARIANTS = ["full.webp", "full.jpg", "thumb.webp", "blur.webp"] as const;
+export const PUBLIC_VARIANTS: readonly Variant[] = ["blur.webp"];
 export type Variant = (typeof VARIANTS)[number];
 
 export type PhotoError = "too_large" | "not_an_image" | "corrupt";
@@ -21,6 +23,8 @@ export function sniffImage(buf: Buffer): "jpeg" | "png" | "webp" | null {
 export type ProcessedPhoto = {
   full: { webp: Buffer; jpg: Buffer };
   thumb: Buffer;
+  /** ~32px wide, heavily blurred. Reveals colour and mood only, no detail. */
+  blur: Buffer;
   width: number;
   height: number;
 };
@@ -37,12 +41,13 @@ export async function processPhoto(input: Buffer): Promise<{ ok: true; photo: Pr
     const base = sharp(input, { limitInputPixels: 100_000_000, failOn: "error" }).rotate();
     const resized = base.resize({ width: MAX_DIMENSION, height: MAX_DIMENSION, fit: "inside", withoutEnlargement: true });
     // allSettled: a corrupt file makes every branch reject; none may be left unhandled.
-    const [webp, jpg, thumb] = await Promise.allSettled([
+    const [webp, jpg, thumb, blur] = await Promise.allSettled([
       resized.clone().webp({ quality: 80 }).toBuffer(),
       resized.clone().jpeg({ quality: 82, mozjpeg: true }).toBuffer({ resolveWithObject: true }),
       base.clone().resize({ width: THUMB_WIDTH, withoutEnlargement: true }).webp({ quality: 72 }).toBuffer(),
+      base.clone().resize({ width: 32, withoutEnlargement: true }).blur(2).webp({ quality: 45 }).toBuffer(),
     ]);
-    if (webp.status !== "fulfilled" || jpg.status !== "fulfilled" || thumb.status !== "fulfilled") {
+    if (webp.status !== "fulfilled" || jpg.status !== "fulfilled" || thumb.status !== "fulfilled" || blur.status !== "fulfilled") {
       return { ok: false, error: "corrupt" };
     }
     return {
@@ -50,6 +55,7 @@ export async function processPhoto(input: Buffer): Promise<{ ok: true; photo: Pr
       photo: {
         full: { webp: webp.value, jpg: jpg.value.data },
         thumb: thumb.value,
+        blur: blur.value,
         width: jpg.value.info.width,
         height: jpg.value.info.height,
       },
@@ -66,6 +72,7 @@ export async function storePhoto(storage: StorageAdapter, key: string, p: Proces
     storage.put(`${key}/full.webp`, p.full.webp),
     storage.put(`${key}/full.jpg`, p.full.jpg),
     storage.put(`${key}/thumb.webp`, p.thumb),
+    storage.put(`${key}/blur.webp`, p.blur),
   ]);
 }
 
@@ -73,4 +80,5 @@ export const CONTENT_TYPES: Record<Variant, string> = {
   "full.webp": "image/webp",
   "full.jpg": "image/jpeg",
   "thumb.webp": "image/webp",
+  "blur.webp": "image/webp",
 };

@@ -4,6 +4,10 @@ Marketplace for buying and selling apartments that operate as short-term rentals
 **locked** for investors until the owner approves their access request. See `CLAUDE.md` for product rules
 and `docs/OPEN_QUESTIONS.md` for what still depends on real samples or decisions.
 
+## Landing page
+
+The home page (`/`) is the Stayield landing page (bilingual EN/HE, RTL), with the privacy policy at `/privacy`. Copy lives in `src/i18n/*.landing.ts`; brand files in `public/brand/` and `src/app/icon.png`. Browsing listings requires an account.
+
 ## How it works
 
 1. **Investor signs up** and sees every listing blurred and locked (no price, address detail, income or report).

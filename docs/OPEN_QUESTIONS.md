@@ -63,3 +63,6 @@ The first version replaced pay-to-unlock with owner-approved access. Whether and
 ## 10. Investor verification depth
 "Advanced verification" is a self-declared profile. Nothing checks identity or proof of funds yet.
 Decide whether admins review profiles (the `reviewInvestorAction` hook exists), or a KYC provider is used.
+
+## 11. Privacy contact
+`/privacy` says a dedicated contact address will be published before launch. `TODO(contact)`: add the address (or a form) in `src/i18n/*.landing.ts` (`privacy.5.body`). The old early-access waitlist form was dropped: visitors now create accounts directly.

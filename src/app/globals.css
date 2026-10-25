@@ -1154,3 +1154,140 @@ table.table {
   color: #3d4757;
   border-color: #d5d9e0;
 }
+
+/* ---------- Landing page ---------- */
+.lp-hero {
+  display: grid;
+  gap: 40px;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .lp-hero {
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 64px;
+  }
+}
+.lp-hero h1 {
+  max-width: 16ch;
+  font-size: clamp(2.2rem, 6vw, 3.9rem);
+  line-height: 1.1;
+}
+.lp-signin {
+  margin: 0;
+}
+.hero .lp-signin a {
+  color: #cfe8dd;
+}
+.lp-sample {
+  background: var(--card);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: 0 30px 60px -20px rgba(0, 0, 0, 0.5);
+}
+.lp-sample-h {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.lp-sample-h h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+.lp-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #f3efe4;
+  color: var(--muted);
+}
+.lp-kpis {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 14px 0 18px;
+}
+.lp-kpi {
+  background: var(--paper);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.lp-kpi b {
+  display: block;
+  font-family: var(--font-heading, inherit);
+  font-size: 1.25rem;
+}
+.lp-kpi span {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.lp-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 110px;
+  direction: ltr;
+}
+.lp-bars i {
+  flex: 1;
+  background: var(--navy);
+  border-radius: 5px 5px 0 0;
+  opacity: 0.88;
+}
+.lp-bars i.recent {
+  background: var(--green);
+  opacity: 1;
+}
+.lp-bars-l {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-top: 6px;
+  direction: ltr;
+}
+.lp-note {
+  font-size: 0.78rem;
+  color: var(--muted);
+  margin: 12px 0 0;
+}
+.lp-sec-h {
+  max-width: 40rem;
+  margin-bottom: 32px;
+}
+.lp-sec-h p {
+  margin: 12px 0 0;
+  font-size: 1.1rem;
+}
+.lp-dark {
+  background: var(--navy);
+  color: #fff;
+}
+.lp-dark h2,
+.lp-dark h3 {
+  color: #fff;
+}
+.lp-dark .lp-sec-h p,
+.lp-pillar p {
+  color: #cfd9ea;
+}
+.lp-pillar {
+  border-top: 3px solid var(--green);
+  padding-top: 18px;
+}
+.lp-pillar p {
+  margin: 8px 0 0;
+}
+.lp-join {
+  display: grid;
+  gap: 24px;
+  align-items: center;
+}
+@media (min-width: 820px) {
+  .lp-join {
+    grid-template-columns: 1fr auto;
+  }
+}

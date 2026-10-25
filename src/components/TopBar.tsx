@@ -4,7 +4,6 @@ import { auth } from "@/adapters";
 import { getDb } from "@/db/client";
 import { getT } from "@/i18n/server";
 import { investorUnseenCount, ownerPendingCount } from "@/lib/access";
-import { LogoMark } from "./Logo";
 import { NavMenu, type NavItem } from "./NavMenu";
 
 export async function TopBar() {
@@ -32,8 +31,8 @@ export async function TopBar() {
     <header className="topbar">
       <div className="container topbar-inner" style={{ position: "relative" }}>
         <Link href="/" className="logo" aria-label={t("brand.name")}>
-          <LogoMark />
-          <span>{t("brand.name")}</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/logo-horizontal.png" alt={t("brand.name")} width={115} height={40} />
         </Link>
         <NavMenu items={items} />
       </div>

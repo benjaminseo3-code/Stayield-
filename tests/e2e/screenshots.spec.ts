@@ -51,6 +51,8 @@ for (const lang of ["en", "he"] as const) {
       await shot(ap, "sign-in");
       await ap.goto("/sign-up?role=buyer");
       await shot(ap, "sign-up");
+      await ap.goto("/privacy");
+      await shot(ap, "privacy");
       await ap.goto("/sell");
       await shot(ap, "sell-landing");
       await anon.close();

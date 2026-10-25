@@ -1,4 +1,5 @@
 import type { DictKey } from "./en";
+import { heLanding } from "./he.landing";
 import { heAccess } from "./he.access";
 import { heBuyer } from "./he.buyer";
 import { heSell } from "./he.sell";
@@ -7,6 +8,7 @@ export const he: Record<DictKey, string> = {
   ...heSell,
   ...heBuyer,
   ...heAccess,
+  ...heLanding,
   "brand.name": "Stayield",
   "brand.tagline": "קונים דירות עם הכנסה מוכחת מהשכרה לטווח קצר",
 
@@ -51,21 +53,6 @@ export const he: Record<DictKey, string> = {
   "trust.api_verified.desc": "נתוני ההכנסה נמשכו ישירות מפלטפורמת ההזמנות.",
   "trust.label": "רמת אמינות הנתונים",
 
-  "home.hero.title": "דירות עם הכנסה שאפשר לאמת",
-  "home.hero.sub":
-    "דפדפו בדירות להשכרה לטווח קצר כשהפרטים מטושטשים. צרו פרופיל משקיע, בקשו גישה, והבעלים מחליטים מי רואה את המחיר, התמונות וההכנסה המאומתת.",
-  "home.hero.ctaBrowse": "לצפייה בדירות",
-  "home.hero.ctaSell": "להציע את הדירה שלכם",
-  "home.how.title": "איך זה עובד",
-  "home.how.1.title": "יוצרים פרופיל משקיע",
-  "home.how.1.body":
-    "נרשמים ומשלימים אימות מתקדם: מי אתם, מה התקציב ומה אתם מחפשים.",
-  "home.how.2.title": "מבקשים גישה למודעה",
-  "home.how.2.body":
-    "תמונות, מחירים והכנסה נשארים מטושטשים עד שהבעלים מאשרים. שולחים בקשה עם הודעה קצרה.",
-  "home.how.3.title": "הבעלים מחליטים",
-  "home.how.3.body":
-    "הבעלים רואים את הפרופיל שלכם ומאשרים, דוחים או מבקשים מידע נוסף. אחרי אישור רואים את המודעה המלאה ואת דוח ההכנסה המאומת.",
   "home.featured.title": "דירות מומלצות",
   "home.featured.all": "לכל הדירות",
 

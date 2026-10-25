@@ -1,3 +1,4 @@
+import { enLanding } from "./en.landing";
 import { enAccess } from "./en.access";
 import { enBuyer } from "./en.buyer";
 import { enSell } from "./en.sell";
@@ -7,6 +8,7 @@ export const en = {
   ...enSell,
   ...enBuyer,
   ...enAccess,
+  ...enLanding,
   "brand.name": "Stayield",
   "brand.tagline": "Buy apartments with proven short-term-rental income",
 
@@ -52,21 +54,6 @@ export const en = {
   "trust.api_verified.desc": "Income data was pulled directly from the booking platform.",
   "trust.label": "Data trust level",
 
-  "home.hero.title": "Apartments with income you can verify",
-  "home.hero.sub":
-    "Browse short-term-rental apartments with the details blurred. Create an investor profile, request access, and the owner decides who sees the price, photos and verified income.",
-  "home.hero.ctaBrowse": "Browse apartments",
-  "home.hero.ctaSell": "List your apartment",
-  "home.how.title": "How it works",
-  "home.how.1.title": "Create your investor profile",
-  "home.how.1.body":
-    "Sign up and complete advanced verification: who you are, your budget and what you are looking for.",
-  "home.how.2.title": "Request access to a listing",
-  "home.how.2.body":
-    "Photos, prices and income stay blurred until the owner approves. Send a request with a short message.",
-  "home.how.3.title": "The owner decides",
-  "home.how.3.body":
-    "Owners see your profile and approve, decline or ask for more information. Once approved you see the full listing and the verified income report.",
   "home.featured.title": "Featured apartments",
   "home.featured.all": "See all",
 

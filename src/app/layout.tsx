@@ -26,8 +26,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getT();
   return {
     metadataBase: new URL(appUrl()),
-    title: { default: `${t("brand.name")} — ${t("brand.tagline")}`, template: `%s · ${t("brand.name")}` },
-    description: t("home.hero.sub"),
+    title: { default: t("lp.meta.title"), template: `%s · ${t("brand.name")}` },
+    description: t("lp.sub"),
     openGraph: { type: "website", siteName: "Stayield", title: t("brand.name"), description: t("brand.tagline"), images: [{ url: "/brand/og.png", width: 1200, height: 630 }] },
     twitter: { card: "summary_large_image" },
   };

@@ -15,6 +15,11 @@ import { requireAdmin } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
+export async function generateMetadata() {
+  const { t } = await getT();
+  return { title: t("admin.title") };
+}
+
 export default async function AdminProperty({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { t } = await getT();

@@ -40,6 +40,8 @@ const nextConfig: NextConfig = {
   // Native/embedded packages must not be bundled by the server compiler.
   serverExternalPackages: ["@electric-sql/pglite", "sharp", "mailparser", "mailauth", "pg"],
   poweredByHeader: false,
+  // The migrator reads ./drizzle at runtime via process.cwd(); make sure it ships with every function.
+  outputFileTracingIncludes: { "/**": ["./drizzle/**/*"] },
   images: { unoptimized: true },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
 import { eq } from "drizzle-orm";
 import { getDb } from "@/db/client";
+import { appUrl } from "@/lib/app-url";
 import { properties } from "@/db/schema";
 
 export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = (process.env.APP_URL ?? "http://localhost:3000").replace(/\/$/, "");
+  const base = appUrl();
   const live = await (await getDb()).select({ slug: properties.publicSlug, updatedAt: properties.updatedAt }).from(properties).where(eq(properties.status, "live"));
   return [
     { url: `${base}/`, changeFrequency: "weekly", priority: 1 },

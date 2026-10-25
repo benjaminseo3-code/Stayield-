@@ -1,4 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
+import { appUrl } from "@/lib/app-url";
 import type { CheckoutInput, CheckoutSession, PaymentEvent, PaymentProvider } from "@/ports/payment";
 
 /** Dev provider: redirects to an in-app page that "pays" with one click. */
@@ -6,7 +7,7 @@ export class MockPaymentProvider implements PaymentProvider {
   readonly name = "mock" as const;
 
   async createCheckout(input: CheckoutInput): Promise<CheckoutSession> {
-    const base = process.env.APP_URL ?? "http://localhost:3000";
+    const base = appUrl();
     return {
       providerRef: `mock_${input.paymentId}`,
       redirectUrl: `${base}/checkout/mock?payment=${encodeURIComponent(input.paymentId)}`,

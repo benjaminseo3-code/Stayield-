@@ -1,9 +1,10 @@
 import { createHmac } from "node:crypto";
+import { appUrl } from "@/lib/app-url";
 import { parseTrustedDomains } from "@/lib/ingest/email";
 
 /** Environment-derived settings. Read lazily so tests can set env vars first. */
 export const config = {
-  appUrl: () => process.env.APP_URL ?? "http://localhost:3000",
+  appUrl: () => appUrl(),
   inboundDomain: () => (process.env.INBOUND_DOMAIN ?? "inbound.localhost").toLowerCase(),
   trustedSenderDomains: () => parseTrustedDomains(process.env.TRUSTED_SENDER_DOMAINS),
   unlockPriceMinor: () => Number(process.env.UNLOCK_PRICE_MINOR ?? 4900),

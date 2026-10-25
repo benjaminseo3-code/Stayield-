@@ -9,6 +9,7 @@ import { nextCookies } from "better-auth/next-js";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db/client";
 import { getMailer } from "@/adapters";
+import { appUrl, isDemoMode } from "@/lib/app-url";
 import type { AuthAdapter, SessionUser } from "@/ports/auth";
 
 function authSecret(): string {
@@ -43,7 +44,14 @@ async function build() {
   return betterAuth({
     rateLimit: { enabled: !rateLimitOff(), window: 60, max: 60 },
     secret: authSecret(),
-    baseURL: process.env.APP_URL ?? "http://localhost:3000",
+    baseURL: appUrl(),
+    trustedOrigins: [appUrl(), ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []), ...(process.env.VERCEL_BRANCH_URL ? [`https://${process.env.VERCEL_BRANCH_URL}`] : [])],
+    // Demo only: credentials login for the seeded accounts; self sign-up stays off.
+    // The signed session cookie is trusted for 12h so a request served by a different serverless
+    // instance (each has its own in-memory demo database) does not log the visitor out.
+    ...(isDemoMode()
+      ? { emailAndPassword: { enabled: true, disableSignUp: true }, session: { cookieCache: { enabled: true, maxAge: 12 * 3600 } } }
+      : {}),
     database: drizzleAdapter(db, {
       provider: "pg",
       schema: {
@@ -113,6 +121,16 @@ export const betterAuthAdapter: AuthAdapter = {
   async sendMagicLink(email, callbackURL, headers) {
     const a = await auth();
     await a.api.signInMagicLink({ body: { email, callbackURL }, headers });
+  },
+  async signInWithPassword(email, password, headers) {
+    if (!isDemoMode()) return false;
+    try {
+      const a = (await auth()) as unknown as { api: { signInEmail: (o: { body: { email: string; password: string }; headers: Headers }) => Promise<unknown> } };
+      await a.api.signInEmail({ body: { email, password }, headers });
+      return true;
+    } catch {
+      return false;
+    }
   },
   async signOut(headers) {
     const a = await auth();

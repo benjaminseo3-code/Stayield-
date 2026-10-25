@@ -18,3 +18,14 @@ export async function signOutAction() {
   await auth.signOut(await headers());
   redirect("/");
 }
+
+/** Demo deployments only: sign in with the seeded demo credentials. */
+export async function passwordSignInAction(formData: FormData) {
+  const next = safeNext(String(formData.get("next") ?? "/"));
+  const email = z.string().trim().toLowerCase().email().max(254).safeParse(formData.get("email"));
+  const password = z.string().min(1).max(200).safeParse(formData.get("password"));
+  if (!email.success || !password.success) redirect(`/sign-in?error=invalid&next=${encodeURIComponent(next)}`);
+  const ok = await auth.signInWithPassword(email.data, password.data, await headers());
+  if (!ok) redirect(`/sign-in?error=credentials&next=${encodeURIComponent(next)}`);
+  redirect(next);
+}

@@ -4,6 +4,8 @@ import type { Mailer } from "@/ports/mailer";
 import type { InboundEmailProvider } from "@/ports/inbound-email";
 import type { PaymentProvider } from "@/ports/payment";
 import { LocalStorage } from "./local/storage";
+import { MemoryStorage } from "./local/memory-storage";
+import { LogMailer } from "./local/log-mailer";
 import { OutboxMailer } from "./local/mailer";
 import { GenericInboundProvider } from "./local/inbound-email";
 import { MockPaymentProvider, StripePaymentProvider } from "./payments";
@@ -21,15 +23,16 @@ export function getStorage(): StorageAdapter {
   const r = reg();
   if (!r.storage) {
     const kind = process.env.STORAGE_ADAPTER ?? "local";
-    if (kind !== "local") throw new Error(`Storage adapter "${kind}" is not implemented yet`);
-    r.storage = new LocalStorage(process.env.STORAGE_DIR);
+    if (kind === "memory") r.storage = new MemoryStorage();
+    else if (kind === "local") r.storage = new LocalStorage(process.env.STORAGE_DIR);
+    else throw new Error(`Storage adapter "${kind}" is not implemented yet`);
   }
   return r.storage;
 }
 
 /** The local outbox mailer; a production mailer plugs in here (see docs/ARCHITECTURE.md). */
 export function getMailer(): Mailer & { list?: OutboxMailer["list"] } {
-  return (reg().mailer ??= new OutboxMailer(process.env.OUTBOX_DIR));
+  return (reg().mailer ??= process.env.MAILER === "log" ? new LogMailer() : new OutboxMailer(process.env.OUTBOX_DIR));
 }
 
 export function getInboundProvider(): InboundEmailProvider {

@@ -3,6 +3,7 @@ import { Frank_Ruhl_Libre, Heebo } from "next/font/google";
 import { LangProvider } from "@/i18n/client";
 import { getT } from "@/i18n/server";
 import { Footer } from "@/components/Footer";
+import { appUrl } from "@/lib/app-url";
 import { TopBar } from "@/components/TopBar";
 import "./globals.css";
 
@@ -24,7 +25,7 @@ export const viewport: Viewport = { themeColor: "#0B1C30", width: "device-width"
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getT();
   return {
-    metadataBase: new URL(process.env.APP_URL ?? "http://localhost:3000"),
+    metadataBase: new URL(appUrl()),
     title: { default: `${t("brand.name")} — ${t("brand.tagline")}`, template: `%s · ${t("brand.name")}` },
     description: t("home.hero.sub"),
     openGraph: { type: "website", siteName: "Stayield", title: t("brand.name"), description: t("brand.tagline"), images: [{ url: "/brand/og.png", width: 1200, height: 630 }] },

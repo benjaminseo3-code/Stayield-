@@ -13,6 +13,16 @@ export type Db = PgDatabase<PgQueryResultHKT, typeof schema>;
 
 const MIGRATIONS = path.join(process.cwd(), "drizzle");
 
+/**
+ * Public demo deployments (DEMO_MODE=true) start from an empty in-memory database, so the demo
+ * accounts and listings are created on first use. Never runs otherwise.
+ */
+async function seedIfDemo(db: Db): Promise<void> {
+  if (process.env.DEMO_MODE !== "true") return;
+  const [{ seedDemo }, { getStorage }] = await Promise.all([import("@/lib/demo-seed"), import("@/adapters")]);
+  await seedDemo(db, getStorage());
+}
+
 type Handle = { db: Db; ready: Promise<void>; close: () => Promise<void> };
 
 function open(): Handle {
@@ -32,7 +42,7 @@ function open(): Handle {
   const db = drizzlePglite(client, { schema });
   return {
     db,
-    ready: migratePglite(db, { migrationsFolder: MIGRATIONS }),
+    ready: migratePglite(db, { migrationsFolder: MIGRATIONS }).then(() => seedIfDemo(db)),
     close: () => client.close(),
   };
 }

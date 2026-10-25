@@ -1,0 +1,20 @@
+import { getT } from "@/i18n/server";
+
+export async function Footer() {
+  const { t } = await getT();
+  return (
+    <footer className="footer">
+      <div className="container stack" style={{ ["--gap" as string]: "8px" }}>
+        <p className="disclaimer" style={{ margin: 0 }}>
+          {t("footer.disclaimer")}
+        </p>
+        <p className="small" style={{ margin: 0 }}>
+          {t("footer.privacy")}
+        </p>
+        <p className="small" dir="ltr" style={{ margin: 0, textAlign: "start" }}>
+          {t("footer.rights", { year: new Date().getFullYear() })}
+        </p>
+      </div>
+    </footer>
+  );
+}

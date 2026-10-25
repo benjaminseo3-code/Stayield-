@@ -2,6 +2,7 @@
  * Seeds three clearly-marked DEMO properties with SYNTHETIC income data.
  * Nothing here comes from a real booking platform.
  */
+import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
 import sharp from "sharp";
 import { addPhoto } from "@/lib/photo-service";
@@ -108,6 +109,15 @@ const DEMOS: Demo[] = [
   },
 ];
 
+/**
+ * Stable ids for demo rows. A serverless demo runs several instances, each seeding its own copy; with
+ * deterministic ids a page rendered by one instance can load its photos from another.
+ */
+const demoUuid = (seed: string) => {
+  const h = createHash("sha1").update(`stayield-demo:${seed}`).digest("hex");
+  return `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-a${h.slice(17, 20)}-${h.slice(20, 32)}`;
+};
+
 const daysIn = (y: number, m: number) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
 
 /** Credentials login for a demo user (Better Auth "credential" account). Only usable when DEMO_MODE=true. */
@@ -147,6 +157,7 @@ export async function seedDemo(db: Db, storageAdapter: StorageAdapter): Promise<
     const [prop] = await db
       .insert(schema.properties)
       .values({
+        id: demoUuid(d.slug),
         ownerId: SELLER_ID,
         status: "live",
         publicSlug: d.slug,
@@ -187,7 +198,7 @@ export async function seedDemo(db: Db, storageAdapter: StorageAdapter): Promise<
     const storage = storageAdapter;
     await storage.deletePrefix(`photos/${prop.id}`);
     for (let v = 0; v < 5; v++) {
-      const res = await addPhoto(db, storage, prop.id, await demoImage(idx, v));
+      const res = await addPhoto(db, storage, prop.id, await demoImage(idx, v), { id: demoUuid(`${d.slug}:photo:${v}`) });
       if (!res.ok) throw new Error(`demo photo failed: ${res.error}`);
     }
     await db

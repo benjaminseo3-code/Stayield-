@@ -8,14 +8,14 @@ import { MAX_PHOTOS, photoKey, processPhoto, storePhoto, type PhotoError } from 
 export type AddPhotoResult = { ok: true; id: string } | { ok: false; error: PhotoError | "limit_reached" };
 
 /** Adds one processed photo. The first photo becomes the cover. */
-export async function addPhoto(db: Db, storage: StorageAdapter, propertyId: string, bytes: Buffer): Promise<AddPhotoResult> {
+export async function addPhoto(db: Db, storage: StorageAdapter, propertyId: string, bytes: Buffer, opts: { id?: string } = {}): Promise<AddPhotoResult> {
   const existing = await db.select({ id: propertyPhotos.id }).from(propertyPhotos).where(eq(propertyPhotos.propertyId, propertyId));
   if (existing.length >= MAX_PHOTOS) return { ok: false, error: "limit_reached" };
 
   const processed = await processPhoto(bytes);
   if (!processed.ok) return processed;
 
-  const id = randomUUID();
+  const id = opts.id ?? randomUUID();
   const key = photoKey(propertyId, id);
   await storePhoto(storage, key, processed.photo);
   await db.insert(propertyPhotos).values({

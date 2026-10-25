@@ -11,8 +11,8 @@ export async function Footer() {
         <p className="small" style={{ margin: 0 }}>
           {t("footer.privacy")}
         </p>
-        <p className="small" dir="ltr" style={{ margin: 0, textAlign: "start" }}>
-          {t("footer.rights", { year: new Date().getFullYear() })}
+        <p className="small" style={{ margin: 0 }}>
+          <span dir="ltr">{t("footer.rights", { year: new Date().getFullYear() })}</span>
         </p>
       </div>
     </footer>

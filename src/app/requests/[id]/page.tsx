@@ -1,3 +1,4 @@
+import { countryLabel } from "@/lib/countries";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { decideAction, replyAction, revokeAction, withdrawAction } from "@/app/actions/requests";
@@ -30,7 +31,7 @@ export default async function RequestPage({ params, searchParams }: { params: Pr
   }
   if (!d) notFound();
   const { request: r, property: p, profile, messages, viewerIs } = d;
-  const place = viewerIs === "investor" && r.status !== "approved" ? [p.city, p.country].filter(Boolean).join(", ") : [p.neighborhood, p.city, p.country].filter(Boolean).join(", ");
+  const place = viewerIs === "investor" && r.status !== "approved" ? [p.city, countryLabel(t, p.country)].filter(Boolean).join(", ") : [p.neighborhood, p.city, countryLabel(t, p.country)].filter(Boolean).join(", ");
   const open = r.status === "pending" || r.status === "info_requested";
 
   return (

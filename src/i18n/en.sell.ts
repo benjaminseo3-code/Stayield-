@@ -78,7 +78,6 @@ export const enSell = {
 
   "basics.title": "Tell us about the apartment",
   "basics.country": "Country",
-  "basics.countryHint": "Two-letter code, e.g. IL, PT, GR",
   "basics.city": "City",
   "basics.neighborhood": "Neighborhood",
   "basics.price": "Asking price",

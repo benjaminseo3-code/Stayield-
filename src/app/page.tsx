@@ -10,7 +10,9 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   const { t } = await getT();
   const steps = [1, 2, 3] as const;
-  const featured = (await listLiveListings(await getDb(), await currentUser())).slice(0, 3);
+  // Listings are for signed-in members; visitors only see the landing content.
+  const user = await currentUser();
+  const featured = user ? (await listLiveListings(await getDb(), user)).slice(0, 3) : [];
   return (
     <>
       <section className="hero">

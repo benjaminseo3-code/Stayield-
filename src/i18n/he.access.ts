@@ -56,7 +56,7 @@ export const heAccess: Record<keyof typeof enAccess, string> = {
   "profile.budgetMin": "תקציב מ-",
   "profile.budgetMax": "תקציב עד",
   "profile.targetCountries": "מדינות שאתם מחפשים בהן",
-  "profile.targetHint": "למשל: פורטוגל, יוון.",
+  "profile.targetHint": "ניתן לבחור יותר ממדינה אחת.",
   "profile.experience": "ניסיון בנכסים להשכרה",
   "profile.experience.first_time": "רכישה ראשונה",
   "profile.experience.one_to_three": "1 עד 3 נכסים",
@@ -198,4 +198,10 @@ export const heAccess: Record<keyof typeof enAccess, string> = {
   "admin.investors.verify": "אימות",
   "admin.investors.suspend": "השעיה",
   "admin.investors.restore": "החזרה",
+
+  "country.IL": "ישראל",
+  "country.CY": "קפריסין",
+  "country.GR": "יוון",
+  "country.choose": "בחרו מדינה",
+  "country.all": "כל המדינות",
 };

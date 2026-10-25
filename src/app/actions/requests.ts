@@ -1,5 +1,6 @@
 "use server";
 
+import { parseCountries } from "@/lib/countries";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -43,7 +44,7 @@ export async function saveProfileAction(_prev: ProfileState, formData: FormData)
     budgetMin: num(formData.get("budgetMin")),
     budgetMax: num(formData.get("budgetMax")),
     currency: text(formData.get("currency")),
-    targetCountries: text(formData.get("targetCountries")),
+    targetCountries: parseCountries(formData.getAll("targetCountries").join(",")).join(","),
     experience: text(formData.get("experience")),
     financing: text(formData.get("financing")),
     timeline: text(formData.get("timeline")),

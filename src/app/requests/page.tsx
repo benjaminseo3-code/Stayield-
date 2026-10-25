@@ -1,3 +1,4 @@
+import { countryLabel } from "@/lib/countries";
 import Link from "next/link";
 import { getDb } from "@/db/client";
 import { getT } from "@/i18n/server";
@@ -81,7 +82,7 @@ export default async function Requests() {
                 <li key={r.id} style={{ padding: "12px 0", borderBottom: "1px solid var(--line)" }} data-testid="request-row">
                   <Link href={`/requests/${r.id}`} className="row between" style={{ textDecoration: "none", color: "inherit" }}>
                     <span>
-                      <strong>{[r.city, r.country].filter(Boolean).join(", ")}</strong>
+                      <strong>{[r.city, countryLabel(t, r.country)].filter(Boolean).join(", ")}</strong>
                       {r.investorUnseen && <span className="badge-count" aria-label={t("requests.new")}>•</span>}
                       <span className="muted small" style={{ display: "block" }}>{day(r.updatedAt)}</span>
                     </span>

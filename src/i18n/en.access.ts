@@ -55,7 +55,7 @@ export const enAccess = {
   "profile.budgetMin": "Budget from",
   "profile.budgetMax": "Budget up to",
   "profile.targetCountries": "Countries you are looking in",
-  "profile.targetHint": "For example: Portugal, Greece.",
+  "profile.targetHint": "Select one or more.",
   "profile.experience": "Experience with rental property",
   "profile.experience.first_time": "First purchase",
   "profile.experience.one_to_three": "1 to 3 properties",
@@ -197,4 +197,10 @@ export const enAccess = {
   "admin.investors.verify": "Verify",
   "admin.investors.suspend": "Suspend",
   "admin.investors.restore": "Restore",
+
+  "country.IL": "Israel",
+  "country.CY": "Cyprus",
+  "country.GR": "Greece",
+  "country.choose": "Choose a country",
+  "country.all": "All countries",
 } as const;

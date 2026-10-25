@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveBasics, type BasicsInput } from "@/app/actions/sell";
 import { useT } from "@/i18n/client";
+import { COUNTRIES, countryLabel, isCountry } from "@/lib/countries";
 
 type State = {
   country: string;
@@ -22,7 +23,7 @@ const num = (v: string): number | null => (v.trim() === "" || Number.isNaN(Numbe
 
 function toInput(s: State): BasicsInput {
   return {
-    country: s.country,
+    country: isCountry(s.country) ? s.country : "",
     city: s.city,
     neighborhood: s.neighborhood,
     askingPrice: num(s.askingPrice),
@@ -80,8 +81,12 @@ export function BasicsForm({ propertyId, initial, nextHref }: { propertyId: stri
       <div className="form-grid">
         <div className="field">
           <label htmlFor="country">{t("basics.country")}</label>
-          <input id="country" className="input" value={s.country} maxLength={2} dir="ltr" onChange={(e) => update("country", e.target.value.toUpperCase())} aria-invalid={bad("country")} aria-describedby="country-hint" />
-          <span id="country-hint" className="hint">{t("basics.countryHint")}</span>
+          <select id="country" className="input" value={s.country} onChange={(e) => update("country", e.target.value)} aria-invalid={bad("country")}>
+            <option value="">{t("country.choose")}</option>
+            {COUNTRIES.map((c) => (
+              <option key={c} value={c}>{countryLabel(t, c)}</option>
+            ))}
+          </select>
         </div>
         <div className="field">
           <label htmlFor="city">{t("basics.city")}</label>

@@ -12,17 +12,15 @@ import { getInvestorProfile, myRequestFor } from "@/lib/access";
 import { getListingBySlug } from "@/lib/data/listings";
 import { getReport } from "@/lib/data/report";
 import { countView } from "@/lib/data/views";
-import { currentUser } from "@/lib/session";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  // Metadata is public: only the locked (anonymous) view is ever used here.
-  const l = await getListingBySlug(await getDb(), null, slug);
-  if (!l) return { title: "Stayield" };
-  const place = [l.city, l.country].filter(Boolean).join(", ");
-  return { title: place, description: `${place}`, robots: { index: true } };
+  // Listings are for signed-in members only: never index them and never put listing data in metadata.
+  void slug;
+  return { title: "Stayield", robots: { index: false, follow: false } };
 }
 
 export default async function PropertyPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: Promise<{ error?: string }> }) {
@@ -30,7 +28,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
   const { error } = await searchParams;
   const { t } = await getT();
   const db = await getDb();
-  const user = await currentUser();
+  const user = await requireUser(`/properties/${slug}`);
   const listing = await getListingBySlug(db, user, slug);
   if (!listing) {
     return (

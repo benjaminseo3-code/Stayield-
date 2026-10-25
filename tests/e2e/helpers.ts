@@ -43,7 +43,8 @@ export async function fillProfile(page: Page, opts: { name?: string } = {}): Pro
   await page.locator("#country").fill("Israel");
   await page.locator("#budgetMin").fill("250000");
   await page.locator("#budgetMax").fill("450000");
-  await page.locator("#targetCountries").fill("Portugal, Greece");
+  await page.getByTestId("target-GR").check();
+  await page.getByTestId("target-CY").check();
   await page.locator("#about").fill("I run two short-term rentals in Tel Aviv and want one more in Southern Europe with verified numbers.");
   await page.getByTestId("profile-submit").click();
 }

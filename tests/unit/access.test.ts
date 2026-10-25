@@ -28,8 +28,8 @@ const ben: Actor = { id: "ben", role: "buyer" };
 const admin: Actor = { id: "admin", role: "admin" };
 
 const profile: ProfileInput = {
-  fullName: "Ana Investor", phone: "+351 900 000 000", investorType: "individual", entityName: "", country: "Portugal",
-  budgetMin: 200000, budgetMax: 400000, currency: "EUR", targetCountries: "Portugal", experience: "one_to_three", financing: "mixed", timeline: "three_months",
+  fullName: "Ana Investor", phone: "+351 900 000 000", investorType: "individual", entityName: "", country: "CY",
+  budgetMin: 200000, budgetMax: 400000, currency: "EUR", targetCountries: "CY", experience: "one_to_three", financing: "mixed", timeline: "three_months",
   about: "I own two rental apartments in Porto and want a third with verified numbers before I buy.", website: "",
 };
 
@@ -42,7 +42,7 @@ beforeAll(async () => {
   ({ db, close } = await createTestDb());
   for (const [id, role] of [["owner", "seller"], ["owner2", "seller"], ["ana", "buyer"], ["ben", "buyer"], ["admin", "admin"]] as const) await makeUser(db, id, role);
   const mk = async (slug: string, status: "live" | "draft", ownerId = "owner") =>
-    (await db.insert(s.properties).values({ ownerId, publicSlug: slug, status, city: "Lisbon", country: "PT" }).returning({ id: s.properties.id }))[0].id;
+    (await db.insert(s.properties).values({ ownerId, publicSlug: slug, status, city: "Limassol", country: "CY" }).returning({ id: s.properties.id }))[0].id;
   lisbon = await mk("lisbon", "live");
   draft = await mk("draft", "draft");
 });
@@ -117,7 +117,7 @@ describe("the owner's side", () => {
   it("the owner sees the investor's profile, but not phone or email before approving", async () => {
     const d = await getRequestDetail(db, owner, reqId);
     expect(d?.viewerIs).toBe("owner");
-    expect(d?.profile).toMatchObject({ fullName: "Ana Investor", country: "Portugal", phone: null, email: null });
+    expect(d?.profile).toMatchObject({ fullName: "Ana Investor", country: "CY", phone: null, email: null });
     // opening it clears the owner's "new" flag
     expect(await ownerPendingCount(db, "owner")).toBe(0);
   });

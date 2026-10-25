@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getT } from "@/i18n/server";
+import { countryLabel } from "@/lib/countries";
 import { formatMoney } from "@/lib/format";
 import type { Listing } from "@/lib/data/listings";
 import { Photo } from "./Photo";
@@ -12,7 +13,7 @@ export async function PropertyCard({ p }: { p: Listing }) {
   const { t, lang } = await getT();
   const locked = p.level === "locked";
   const cover = p.photos.find((x) => x.isCover) ?? p.photos[0];
-  const place = locked ? [p.city, p.country].filter(Boolean).join(", ") : [p.neighborhood, p.city].filter(Boolean).join(", ");
+  const place = locked ? [p.city, countryLabel(t, p.country)].filter(Boolean).join(", ") : [p.neighborhood, p.city].filter(Boolean).join(", ");
   return (
     <Link href={`/properties/${p.slug}`} className="card card-link property-card" data-testid="property-card" data-level={p.level}>
       <div className="cover">

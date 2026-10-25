@@ -1,4 +1,5 @@
 import { getT } from "@/i18n/server";
+import { countryLabel } from "@/lib/countries";
 import { formatDate, formatMoney } from "@/lib/format";
 import type { Listing } from "@/lib/data/listings";
 import { DECOY } from "./PropertyCard";
@@ -16,7 +17,7 @@ const DECOY_TEXT =
 export async function ListingView({ l }: { l: Listing }) {
   const { t, lang } = await getT();
   const locked = l.level === "locked";
-  const place = locked ? [l.city, l.country].filter(Boolean).join(", ") : [l.neighborhood, l.city, l.country].filter(Boolean).join(", ");
+  const place = locked ? [l.city, countryLabel(t, l.country)].filter(Boolean).join(", ") : [l.neighborhood, l.city, countryLabel(t, l.country)].filter(Boolean).join(", ");
   const hidden = <span className="visually-hidden">{t("listing.hiddenUntilApproved")}</span>;
 
   return (

@@ -1,3 +1,4 @@
+import { countryLabel } from "@/lib/countries";
 import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { addVerifiedEmail, deleteMyData, removeVerifiedEmail } from "@/app/actions/account";
@@ -70,7 +71,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
               <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
                 {saved.map((p) => (
                   <li key={p.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
-                    <Link href={`/properties/${p.slug}`}>{[p.city, p.country].filter(Boolean).join(", ")}</Link>
+                    <Link href={`/properties/${p.slug}`}>{[p.city, countryLabel(t, p.country)].filter(Boolean).join(", ")}</Link>
                   </li>
                 ))}
               </ul>

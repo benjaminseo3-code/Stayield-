@@ -6,16 +6,23 @@ test.describe.configure({ mode: "serial" });
 const ATHENS = "/properties/demo-athens-koukaki";
 const alert = (page: import("@playwright/test").Page) => page.locator("[role=alert]:not(#__next-route-announcer__)");
 
-test("anonymous visitors see every listing blurred and the real values are not even in the page", async ({ browser }) => {
+test("guests are sent to sign in; members see every listing blurred and the real values are not even in the page", async ({ browser }) => {
   const ctx = await newContext(browser);
   const page = await ctx.newPage();
+  await page.goto("/properties");
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fproperties/);
+  await page.goto(ATHENS);
+  await expect(page).toHaveURL(/\/sign-in\?next=%2Fproperties%2Fdemo-athens-koukaki/);
+  await expect(page.locator("body")).not.toContainText("Koukaki");
+
+  await signUp(page, "buyer", { name: "Browsing Investor", next: "/properties" });
   await page.goto("/properties");
   await expect(page.getByTestId("property-card")).toHaveCount(3);
   for (const card of await page.getByTestId("property-card").all()) await expect(card).toHaveAttribute("data-level", "locked");
   await expect(page.locator("img.blurred-photo").first()).toBeVisible();
 
   const html = await page.content();
-  for (const secret of ["420,000", "1,950,000", "285,000", "Alfama", "Florentin", "Koukaki", "Bright two-bedroom"]) expect(html, `leaked ${secret}`).not.toContain(secret);
+  for (const secret of ["420,000", "1,950,000", "285,000", "Germasogeia", "Florentin", "Koukaki", "Bright two-bedroom"]) expect(html, `leaked ${secret}`).not.toContain(secret);
 
   // The photo route only gives the blurred variant to people without access.
   const ids = await photoIds(page);
@@ -29,14 +36,17 @@ test("anonymous visitors see every listing blurred and the real values are not e
   await expect(page.getByTestId("report-locked")).toBeVisible();
   const detail = await page.content();
   for (const secret of ["285,000", "Koukaki", "Acropolis"]) expect(detail).not.toContain(secret);
-  await expect(page.getByTestId("signup-to-request")).toBeVisible();
+  await expect(page.getByTestId("complete-profile")).toBeVisible();
   await ctx.close();
 });
 
 test("filters narrow the list and show an empty state", async ({ browser }) => {
   const ctx = await newContext(browser);
   const page = await ctx.newPage();
-  await page.goto("/properties?city=Lisbon");
+  await signUp(page, "buyer", { name: "Filtering Investor", next: "/properties" });
+  await page.goto("/properties?city=Limassol");
+  await expect(page.getByTestId("property-card")).toHaveCount(1);
+  await page.goto("/properties?country=GR");
   await expect(page.getByTestId("property-card")).toHaveCount(1);
   await page.goto("/properties?city=Atlantis");
   await expect(page.getByTestId("empty-state")).toBeVisible();
@@ -89,7 +99,7 @@ test("investor journey: sign up, verify, request, answer a question, get approve
   const profile = own.getByTestId("investor-profile");
   await expect(profile).toContainText("Maya Investor");
   await expect(profile).toContainText("Israel");
-  await expect(profile).toContainText("Portugal, Greece");
+  await expect(profile).toContainText("Cyprus, Greece");
   await expect(profile).not.toContainText(email);
   await expect(profile).not.toContainText("+972 50 123 4567");
 
@@ -223,7 +233,7 @@ test("an owner lists an apartment; it appears blurred to everyone; an investor r
   await own.getByTestId("new-listing").click();
   await own.waitForURL(/\/basics/);
 
-  await own.getByLabel("Country").fill("pt");
+  await own.getByLabel("Country").selectOption("CY");
   await own.getByLabel("City").fill("Porto");
   await own.getByLabel("Neighborhood").fill("Ribeira");
   await own.getByLabel("Asking price").fill("350000");
@@ -271,6 +281,9 @@ test("an owner lists an apartment; it appears blurred to everyone; an investor r
   // Everyone else sees it blurred.
   const anon = await newContext(browser);
   const ap = await anon.newPage();
+  await ap.goto(`/properties/${slug}`);
+  await expect(ap).toHaveURL(/\/sign-in\?next=/); // guests cannot browse
+  await signUp(ap, "buyer", { name: "Window Shopper", next: `/properties/${slug}` });
   await ap.goto(`/properties/${slug}`);
   await expect(ap.getByTestId("locked-gallery")).toBeVisible();
   const html = await ap.content();
@@ -331,6 +344,7 @@ test("a listing with a failed check goes to review; an admin approves it and ver
 
   const anon = await newContext(browser);
   const ap = await anon.newPage();
+  await signUp(ap, "buyer", { name: "Faro Watcher", next: "/properties" });
   await ap.goto("/properties?city=Faro");
   await expect(ap.getByTestId("property-card")).toHaveCount(0);
 
@@ -388,11 +402,11 @@ test("security headers are set and the income band keeps reading order in Hebrew
   expect(h["strict-transport-security"]).toContain("max-age=");
   expect(h["x-powered-by"]).toBeUndefined();
 
-  // The seeded demo investor has approved access to Lisbon, so the real band is shown there.
+  // The seeded demo investor has approved access to Limassol, so the real band is shown there.
   const ctx = await newContext(browser, { lang: "he" });
   const page = await ctx.newPage();
-  await login(page, DEMO.investor, DEMO.password, "/properties?city=Lisbon");
-  await page.goto("/properties?city=Lisbon");
+  await login(page, DEMO.investor, DEMO.password, "/properties?city=Limassol");
+  await page.goto("/properties?city=Limassol");
   await expect(page.locator(".income-band bdi").first()).toHaveAttribute("dir", "ltr");
   await ctx.close();
 });
@@ -401,7 +415,7 @@ test("private pages are not indexable and robots/sitemap exist", async ({ reques
   const robots = await (await request.get("/robots.txt")).text();
   expect(robots).toContain("Disallow: /admin");
   const sitemap = await (await request.get("/sitemap.xml")).text();
-  expect(sitemap).toContain("/properties");
+  expect(sitemap).not.toContain("/properties");
   const signIn = await (await request.get("/sign-in")).text();
   expect(signIn).toMatch(/<meta name="robots" content="noindex/);
 });

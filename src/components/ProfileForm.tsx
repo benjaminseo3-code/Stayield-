@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 import { saveProfileAction, type ProfileState } from "@/app/actions/requests";
+import { COUNTRIES, countryLabel, parseCountries } from "@/lib/countries";
 import { useT } from "@/i18n/client";
 import { EXPERIENCE, FINANCING, INVESTOR_TYPES, PROFILE_CURRENCIES, TIMELINES } from "@/lib/access-constants";
 
@@ -114,11 +115,18 @@ export function ProfileForm({ initial, next }: { initial: ProfileValues; next?: 
           </select>
         </div>
       </div>
-      <div className="field">
-        <label htmlFor="targetCountries">{t("profile.targetCountries")}</label>
-        <input id="targetCountries" name="targetCountries" className="input" defaultValue={initial.targetCountries} aria-describedby="target-hint" />
+      <fieldset className="field" style={{ border: 0, padding: 0, margin: 0 }} aria-describedby="target-hint">
+        <legend>{t("profile.targetCountries")}</legend>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: "8px 20px" }}>
+          {COUNTRIES.map((c) => (
+            <label key={c} style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+              <input type="checkbox" name="targetCountries" value={c} defaultChecked={parseCountries(initial.targetCountries).includes(c)} data-testid={`target-${c}`} />
+              {countryLabel(t, c)}
+            </label>
+          ))}
+        </div>
         <span id="target-hint" className="hint">{t("profile.targetHint")}</span>
-      </div>
+      </fieldset>
       <div className="field">
         <label htmlFor="about">{t("profile.about")}</label>
         <textarea id="about" name="about" className="input" defaultValue={initial.about} maxLength={1500} aria-invalid={bad("about")} aria-describedby="about-err about-hint" required />

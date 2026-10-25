@@ -79,7 +79,6 @@ export const heSell: Record<keyof typeof enSell, string> = {
 
   "basics.title": "ספרו לנו על הדירה",
   "basics.country": "מדינה",
-  "basics.countryHint": "קוד בן שתי אותיות, למשל IL, PT, GR",
   "basics.city": "עיר",
   "basics.neighborhood": "שכונה",
   "basics.price": "מחיר מבוקש",

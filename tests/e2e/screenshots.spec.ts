@@ -45,13 +45,8 @@ for (const lang of ["en", "he"] as const) {
       watch(ap);
       await ap.goto("/");
       await shot(ap, "home");
-      await ap.goto("/properties");
-      await shot(ap, "properties-locked");
-      await ap.goto("/properties?city=Atlantis");
-      await shot(ap, "properties-empty");
-      await ap.goto("/properties/demo-athens-koukaki");
-      await ap.getByTestId("locked-gallery").waitFor();
-      await shot(ap, "property-locked");
+      await ap.goto("/properties"); // members only: guests are sent to sign in
+      await ap.waitForURL(/\/sign-in\?next=%2Fproperties/);
       await ap.goto("/sign-in");
       await shot(ap, "sign-in");
       await ap.goto("/sign-up?role=buyer");
@@ -66,7 +61,13 @@ for (const lang of ["en", "he"] as const) {
       watch(inv);
       await signUp(inv, "buyer", { name: "Tour Investor", next: "/properties/demo-athens-koukaki" });
       await shot(inv, "verification-empty");
+      await inv.goto("/properties");
+      await shot(inv, "properties-locked");
+      await inv.goto("/properties?city=Atlantis");
+      await shot(inv, "properties-empty");
       await inv.goto("/properties/demo-athens-koukaki");
+      await inv.getByTestId("locked-gallery").waitFor();
+      await shot(inv, "property-locked");
       await shot(inv, "property-needs-profile");
       await fillProfile(inv, { name: "Tour Investor" });
       await inv.getByTestId("profile-saved").waitFor();
@@ -82,13 +83,13 @@ for (const lang of ["en", "he"] as const) {
       await shot(inv, "account-investor");
       await invCtx.close();
 
-      // --- the seeded demo investor (approved for Lisbon, pending for Tel Aviv) --
+      // --- the seeded demo investor (approved for Limassol, pending for Tel Aviv) --
       const demoCtx = await newContext(browser, ctxOpts);
       const demo = await demoCtx.newPage();
       watch(demo);
       await login(demo, DEMO.investor, DEMO.password, "/properties");
       await shot(demo, "properties-mixed");
-      await demo.goto("/properties/demo-lisbon-alfama");
+      await demo.goto("/properties/demo-limassol-germasogeia");
       await demo.getByTestId("report").waitFor();
       await shot(demo, "property-full-report");
       await demo.goto("/requests");
@@ -118,7 +119,7 @@ for (const lang of ["en", "he"] as const) {
       await sp.waitForURL(/\/basics/);
       await sp.locator("#city").fill(lang === "he" ? "תל אביב" : "Tel Aviv");
       await sp.locator("#neighborhood").fill(lang === "he" ? "פלורנטין" : "Florentin");
-      await sp.locator("#country").fill("IL");
+      await sp.locator("#country").selectOption("IL");
       await sp.locator("#price").fill("1800000");
       await sp.locator("#currency").selectOption("USD");
       await sp.locator("#sqm").fill("52");

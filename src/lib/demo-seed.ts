@@ -58,17 +58,17 @@ type Demo = {
 
 const DEMOS: Demo[] = [
   {
-    slug: "demo-lisbon-alfama",
-    city: "Lisbon",
-    neighborhood: "Alfama",
-    country: "PT",
+    slug: "demo-limassol-germasogeia",
+    city: "Limassol",
+    neighborhood: "Germasogeia",
+    country: "CY",
     price: 420000,
     currency: "EUR",
     sqm: 62,
     bedrooms: 2,
     bathrooms: 1,
     description:
-      "Demo listing. Bright two-bedroom a few minutes from the river, operated as a short-term rental since 2022. All figures are synthetic.",
+      "Demo listing. Bright two-bedroom a few minutes from the sea, operated as a short-term rental since 2022. All figures are synthetic.",
     trust: "signed_email",
     adr: 138,
     season: [0.55, 0.6, 0.7, 0.8, 0.88, 0.95, 1.05, 1.1, 0.95, 0.82, 0.62, 0.58],
@@ -301,16 +301,16 @@ export async function seedDemo(db: Db, storageAdapter: StorageAdapter, opts: { f
       });
     }
   };
-  // The demo investor: already approved for Lisbon (sees it in full), waiting on Tel Aviv, nothing yet for Athens.
-  await mk("demo-lisbon-alfama", DEMO_BUYER_ID, "approved", [
+  // The demo investor: already approved for Limassol (sees it in full), waiting on Tel Aviv, nothing yet for Athens.
+  await mk("demo-limassol-germasogeia", DEMO_BUYER_ID, "approved", [
     { by: "investor", kind: "request", body: "Hello, I would like to see the full numbers for this apartment. I run a similar unit and can visit in November." },
     { by: "owner", kind: "note", body: "Welcome. Happy to share the full report and details." },
   ]);
   await mk("demo-tel-aviv-florentin", DEMO_BUYER_ID, "pending", [{ by: "investor", kind: "request", body: "Interested in the Florentin apartment. Could you share the full report?" }]);
-  // The owner's inbox: a family office asking about Tel Aviv, and an operator who was asked a question about Lisbon.
+  // The owner's inbox: a family office asking about Tel Aviv, and an operator who was asked a question about Limassol.
   await mk("demo-tel-aviv-florentin", "demo-investor-rossi", "pending", [{ by: "investor", kind: "request", body: "We are a cash buyer and would like the full report and the building details before we fly in." }]);
-  await mk("demo-lisbon-alfama", "demo-investor-levy", "info_requested", [
-    { by: "investor", kind: "request", body: "Please share the full report for Alfama." },
+  await mk("demo-limassol-germasogeia", "demo-investor-levy", "info_requested", [
+    { by: "investor", kind: "request", body: "Please share the full report for Germasogeia." },
     { by: "owner", kind: "question", body: "Thanks. Could you tell me whether you plan to run it yourself or through a manager, and your expected closing date?" },
   ]);
 }

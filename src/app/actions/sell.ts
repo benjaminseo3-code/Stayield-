@@ -7,6 +7,7 @@ import { z } from "zod";
 import { getStorage } from "@/adapters";
 import { getDb } from "@/db/client";
 import { auditLog, consents, inboundAddresses, properties } from "@/db/schema";
+import { COUNTRIES } from "@/lib/countries";
 import { randomToken, slugify } from "@/lib/ids";
 import { evaluatePropertyStatus } from "@/lib/ingest/service";
 import { deleteAllPhotos } from "@/lib/photo-service";
@@ -29,7 +30,7 @@ export async function createListing() {
 }
 
 const basicsSchema = z.object({
-  country: z.string().trim().max(2).regex(/^([A-Za-z]{2})?$/),
+  country: z.enum(["", ...COUNTRIES]),
   city: z.string().trim().max(80),
   neighborhood: z.string().trim().max(80),
   askingPrice: z.number().min(0).max(1e10).nullable(),
@@ -58,7 +59,7 @@ export async function saveBasics(propertyId: string, input: BasicsInput): Promis
   await db
     .update(properties)
     .set({
-      country: d.country.toUpperCase(),
+      country: d.country,
       city: d.city,
       neighborhood: d.neighborhood,
       askingPriceMinor: d.askingPrice == null ? null : Math.round(d.askingPrice * 100),

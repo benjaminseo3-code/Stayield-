@@ -2,8 +2,9 @@ import Link from "next/link";
 import { PropertyCard } from "@/components/PropertyCard";
 import { getDb } from "@/db/client";
 import { getT } from "@/i18n/server";
+import { COUNTRIES, countryLabel } from "@/lib/countries";
 import { listLiveListings } from "@/lib/data/listings";
-import { currentUser } from "@/lib/session";
+import { requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function Properties({ searchParams }: { searchParams: Promi
   const sp = await searchParams;
   const trust = sp.trust === "signed_email" || sp.trust === "self_reported" || sp.trust === "api_verified" ? sp.trust : undefined;
   const filtered = !!(sp.city || sp.country || sp.beds || trust);
-  const items = await listLiveListings(await getDb(), await currentUser(), {
+  const items = await listLiveListings(await getDb(), await requireUser("/properties"), {
     city: sp.city?.trim() || undefined,
     country: sp.country?.trim() || undefined,
     minBedrooms: sp.beds && Number(sp.beds) >= 0 ? Number(sp.beds) : undefined,
@@ -42,7 +43,12 @@ export default async function Properties({ searchParams }: { searchParams: Promi
             </div>
             <div className="field">
               <label htmlFor="f-country">{t("props.filter.country")}</label>
-              <input id="f-country" name="country" className="input" defaultValue={sp.country ?? ""} placeholder="PT" dir="ltr" maxLength={2} />
+              <select id="f-country" name="country" className="input" defaultValue={sp.country ?? ""}>
+                <option value="">{t("country.all")}</option>
+                {COUNTRIES.map((c) => (
+                  <option key={c} value={c}>{countryLabel(t, c)}</option>
+                ))}
+              </select>
             </div>
             <div className="field">
               <label htmlFor="f-beds">{t("props.filter.bedrooms")}</label>

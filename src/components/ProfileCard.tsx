@@ -1,3 +1,4 @@
+import { countryLabel, parseCountries } from "@/lib/countries";
 import { getT } from "@/i18n/server";
 import { formatMoney } from "@/lib/format";
 import type { ProfileView } from "@/lib/access";
@@ -24,7 +25,7 @@ export async function ProfileCard({ profile }: { profile: ProfileView }) {
         {row(t("profile.card.entity"), profile.entityName)}
         {row(t("profile.card.country"), profile.country)}
         {profile.budgetMin != null && profile.budgetMax != null && row(t("profile.budget"), <bdi dir="ltr">{`${formatMoney(profile.budgetMin * 100, profile.currency, lang)} – ${formatMoney(profile.budgetMax * 100, profile.currency, lang)}`}</bdi>)}
-        {row(t("profile.card.targets"), profile.targetCountries)}
+        {row(t("profile.card.targets"), parseCountries(profile.targetCountries).map((c) => countryLabel(t, c)).join(", ") || profile.targetCountries)}
         {profile.experience && row(t("profile.card.experience"), t(`profile.experience.${profile.experience}`))}
         {profile.financing && row(t("profile.card.financing"), t(`profile.financing.${profile.financing}`))}
         {profile.timeline && row(t("profile.card.timeline"), t(`profile.timeline.${profile.timeline}`))}

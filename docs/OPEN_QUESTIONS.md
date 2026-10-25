@@ -24,9 +24,11 @@ removed or blanked.
 `/api/inbound-email` is provider-agnostic. Choose a provider (Postmark, Mailgun, SES, ...) and add an
 adapter that maps its webhook to a raw RFC 822 message.
 
-## 4. Payments
-`PAYMENT_PROVIDER=mock` by default. Stripe test mode is wired behind `STRIPE_SECRET_KEY` and
-`STRIPE_WEBHOOK_SECRET`; price per unlock is `UNLOCK_PRICE_MINOR`.
+## 4. Email delivery and verification
+There is no mail provider yet (`MAILER=log`). Consequences: sign-up does not verify addresses, there is
+no "forgot password", and owners/investors get no email when a request changes (the nav badge is the only
+signal). The `signed_email` tier also needs a verified sender address bound to the seller. Pick a provider
+(Resend, Postmark, SES) and implement `Mailer.send()`.
 
 ## 5. Brand assets
 Placeholder SVG logo in `src/components/Logo.tsx` and `public/brand/icon.svg`.
@@ -53,3 +55,11 @@ retention period; say so and it is a small change in `src/lib/ingest/service.ts`
 Checks marked `warn` (short coverage, a 45-119 day gap, stale data, rate outliers) let the listing go
 live with a visible note; any `fail` (duplicates, overlaps, nights mismatch, mixed currencies, ...)
 sends it to admin review. Thresholds live in `src/lib/ingest/checks.ts` and are easy to tune.
+
+## 9. Monetisation
+The first version replaced pay-to-unlock with owner-approved access. Whether and where money enters
+(listing fee, success fee, paid investor verification) is open; the payment port was removed until decided.
+
+## 10. Investor verification depth
+"Advanced verification" is a self-declared profile. Nothing checks identity or proof of funds yet.
+Decide whether admins review profiles (the `reviewInvestorAction` hook exists), or a KYC provider is used.

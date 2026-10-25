@@ -2,10 +2,10 @@ import sharp from "sharp";
 import type { Browser, BrowserContext, Page } from "@playwright/test";
 import { synthRows, toCsv } from "../helpers/synthetic";
 
-export const BASE = "http://localhost:3100";
+export const BASE = process.env.E2E_BASE ?? "http://localhost:3100";
 export const PASSWORD = "Test-password-123";
 export const DEMO = { owner: "seller@stayield.demo", investor: "buyer@stayield.demo", password: "Stayield-Demo-2026" };
-export const ADMIN = { email: "admin@e2e.test", password: "e2e-admin-password-1" };
+export const ADMIN = { email: process.env.E2E_ADMIN_EMAIL ?? "admin@e2e.test", password: process.env.E2E_ADMIN_PASSWORD ?? "e2e-admin-password-1" };
 
 export const uniqueEmail = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}@e2e.test`;
 

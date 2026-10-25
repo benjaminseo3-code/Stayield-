@@ -9,11 +9,12 @@ src/
   app/            routes: pages, server actions (app/actions), route handlers (app/api)
   components/     UI (server components by default; "use client" only where needed)
   adapters/       implementations of the ports (+ index.ts registry)
-  ports/          interfaces: storage, mailer, inbound-email, payment, auth
+  ports/          interfaces: storage, mailer, inbound-email, auth
   db/             Drizzle schema, client (PGlite or Postgres), migrations in /drizzle
   lib/
     policies.ts   THE access rules (who may see/do what)
-    data/         guarded reads (teaser, report); they call policies before returning anything
+    access.ts     access-request state machine (pending, info_requested, approved, declined, withdrawn, revoked)
+    data/         guarded reads (locked/full listing, report); they call policies before returning anything
     ingest/       parsing, checks, DKIM verification, aggregation, persistence (pure + service)
     metrics/      report maths and the public income band
   i18n/           EN + HE dictionaries (every string), server/client helpers
@@ -23,24 +24,26 @@ src/
 
 | Port | Local (dev) | Production plug-in |
 | --- | --- | --- |
-| `StorageAdapter` | `LocalStorage` -> `./.data/files` | S3 / Supabase Storage: implement `put/get/exists/delete/deletePrefix`, register in `adapters/index.ts` (`STORAGE_ADAPTER`) |
-| `Mailer` | `OutboxMailer` -> `./.data/outbox` (+ `/dev/outbox`) | Postmark/SES/Resend: implement `send()` and return it from `getMailer()` |
+| `StorageAdapter` | `LocalStorage` -> `./.data/files` | `DatabaseStorage` (`storage_objects` table, used on Vercel). S3 / Supabase Storage: implement `put/get/exists/delete/deletePrefix`, register in `adapters/index.ts` (`STORAGE_ADAPTER`) |
+| `Mailer` | `OutboxMailer` -> `./.data/outbox`; `LogMailer` (`MAILER=log`) | Postmark/SES/Resend: implement `send()` and return it from `getMailer()` |
 | `InboundEmailProvider` | `GenericInboundProvider` (raw RFC 822 / multipart / JSON base64) | one small adapter per provider that maps its webhook to raw bytes |
-| `PaymentProvider` | `MockPaymentProvider` (refuses to run in production) | `StripePaymentProvider` (Checkout, test mode with `sk_test_` keys, signed webhook) |
-| `AuthAdapter` | Better Auth + magic link (`adapters/auth.ts`) | same; swap the mailer for real delivery |
+| `AuthAdapter` | Better Auth, email + password (`adapters/auth.ts`) | same; add email verification once a mailer is wired |
 
-## Moving to Supabase
+## Supabase (production setup)
 
-1. **Database**: set `DATABASE_URL` to the Supabase Postgres connection string. The client uses
-   `node-postgres` when it is set and applies the same Drizzle migrations from `/drizzle`
-   (`pnpm db:migrate`). Everything is Postgres-dialect SQL; PGlite is only the dev/test engine.
-2. **Storage**: add a Supabase Storage adapter (same five methods). Keys are already
-   `photos/<propertyId>/<photoId>/{full.webp,full.jpg,thumb.webp}` and
-   `private/submissions/<id>/evidence.json`; keep the `private/` prefix in a private bucket.
-3. **RLS**: the same rules as `lib/policies.ts` are written out as SQL in
-   [`RLS_POLICIES.md`](./RLS_POLICIES.md). Because the app talks to Postgres with its own server
-   credentials, RLS is defence in depth; the application layer remains the primary enforcement.
-4. **Auth**: Better Auth keeps its tables in the same database. Supabase Auth is not needed.
+1. **Database**: `DATABASE_URL` is the Supabase transaction pooler (port 6543) for a dedicated role
+   `stayield_app` that owns nothing outside the `stayield` schema. All tables, enums and the Drizzle
+   migration table live in `stayield` (`pgSchema("stayield")`), so the app can share a Supabase project
+   with other tables in `public` without touching them. TLS verifies against the bundled Supabase CA
+   (`certs/`). The pool is small (`DATABASE_POOL_MAX`, default 3) because every serverless instance
+   opens its own.
+2. **Migrations**: `pnpm db:migrate` runs at build time. `0001_enable_rls.sql` enables RLS on every table
+   with no policies, i.e. the Supabase Data API (anon/authenticated) can read nothing. The Data API is
+   also switched off on the project.
+3. **Storage**: photos, blurred variants and evidence live in `storage_objects` (bytea). Keys are
+   `photos/<propertyId>/<photoId>/{full.webp,full.jpg,thumb.webp,blur.webp}` and
+   `private/submissions/<id>/evidence.json`.
+4. **Auth**: Better Auth keeps its tables in the same schema. Supabase Auth is not used.
 
 ## Trust model and data flow
 
@@ -69,18 +72,30 @@ seller ──forward-as-attachment──▶ p-<token>@inbound.<domain>
 
 ## Access control
 
-`lib/policies.ts` is the single source of rules (teaser, report, reservation rows, raw submissions,
-unlock, moderation). `lib/data/*` call it before returning data and throw `ForbiddenError` otherwise;
-tests cover anonymous, buyer, unlocked buyer, other buyer, owner and admin. API routes additionally
-require a same-origin `Origin` for mutations. Unknown actor/status means deny.
+`lib/policies.ts` is the single source of rules. `lib/data/*` call it before returning data and throw
+`ForbiddenError` otherwise. Unknown actor/status means deny.
+
+- **Locked listing** (anyone who is not owner/admin/approved investor): the server returns a different
+  shape with price, neighbourhood, size, description, listing URL, income and report set to null, decoy
+  values on screen, and only the pre-blurred `blur.webp` photo variant is served. Nothing private is
+  sent to the browser and then hidden with CSS.
+- **Full listing and report**: owner and admin always; an investor only with an `approved` request and a
+  `live` property.
+- **Request access** (`canRequestAccess`): role buyer, not the owner, property live, investor profile
+  submitted or verified, no active request, 7-day cooldown after a decline.
+- **Decide** (`canDecideRequest`): the owner only. The owner sees the investor profile; phone and email
+  are visible only after approval. Admins can review profiles for trust and safety.
+- Investor replies to an info request move it back to `pending`.
+
+API routes additionally require a same-origin `Origin` for mutations.
 
 ## Security measures
 
-- Magic-link login (Better Auth), 5 emails/minute limit; admins only via `ADMIN_EMAILS` + verified link.
-- In-memory rate limits on uploads, CSV, inbound webhook, unlock, intro requests and email changes
+- Email + password (Better Auth, 8-128 chars), rate limited; sign-up can only create buyer or seller roles; admins only from env/seed.
+- In-memory rate limits on uploads, CSV, inbound webhook, access requests and email changes
   (`lib/rate-limit.ts`). **Single-instance only**: use Redis/Upstash behind several instances.
 - Uploads validated by magic bytes, re-encoded (EXIF/GPS removed), 15 MB / 30 photos, decode limits.
-- Webhooks fail closed: inbound needs `x-webhook-secret`; Stripe needs a valid signature.
+- Webhooks fail closed: inbound needs `x-webhook-secret`.
 - CSP, HSTS, `nosniff`, frame denial, Referrer/Permissions policy (`next.config.ts`).
   Known limitation: `script-src` allows `'unsafe-inline'` (Next.js hydration); a nonce policy is a
   later hardening.
@@ -89,7 +104,7 @@ require a same-origin `Origin` for mutations. Unknown actor/status means deny.
 ## Testing
 
 - Vitest (`pnpm test`): parsing, checks, aggregation, DKIM (locally generated keys + mocked DNS),
-  policies (PGlite), payments, photos, rate limiting, metrics.
-- Playwright (`pnpm test:e2e`, needs `pnpm build`): journeys for buyer, seller, admin and a visual tour
+  policies and access state machine (PGlite), photos, rate limiting, metrics.
+- Playwright (`pnpm test:e2e`, needs `pnpm build`): journeys for investor, seller, admin and a visual tour
   of every page in EN/HE at desktop and mobile with axe (WCAG 2.1 A/AA), overflow, `dir`/`lang` and
   console-error assertions. Screenshots land in `./screenshots`.

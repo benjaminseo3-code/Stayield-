@@ -1,45 +1,41 @@
-# Access rules as Postgres RLS (for the later Supabase move)
+# Row-level security
 
-Today every rule lives in `src/lib/policies.ts` and is enforced by the data layer in `src/lib/data`.
-When Supabase Postgres is plugged in, the same rules map to row-level security like this. `auth.uid()`
-is the signed-in user id (`users.id`); `is_admin()` checks `users.role = 'admin'`.
+Every table in the `stayield` schema has RLS **enabled with no policies** (`drizzle/0001_enable_rls.sql`).
+The app connects as the table-owning role `stayield_app`, which bypasses RLS, and enforces access in
+`src/lib/policies.ts`. RLS is defence in depth: if the Supabase Data API or any `anon`/`authenticated`
+key were ever pointed at this schema, they would read nothing (fail closed). The Data API is also disabled
+on the project and the schema is not exposed.
+
+If you later expose some data through Supabase clients, write explicit policies. The intended rules, with
+`auth.uid()` the user id and `is_admin()` checking `users.role = 'admin'`:
 
 ```sql
--- properties: live listings are public; owner/admin see their own regardless of status
-alter table properties enable row level security;
-create policy properties_public_read on properties for select
+-- properties: live listings are listed (the locked shape is built server-side, never from this table);
+-- owner/admin see their own regardless of status
+create policy properties_read on properties for select
   using (status = 'live' or owner_id = auth.uid() or is_admin());
-create policy properties_owner_write on properties for update
-  using (owner_id = auth.uid() or is_admin());
 
--- property_photos: follow the parent property
-create policy photos_read on property_photos for select using (
-  exists (select 1 from properties p where p.id = property_id
-          and (p.status = 'live' or p.owner_id = auth.uid() or is_admin())));
-
--- monthly_aggregates: owner, admin, or a buyer holding an unlock (permanent)
-alter table monthly_aggregates enable row level security;
+-- reservations, data_submissions, monthly_aggregates: owner/admin, or (aggregates only) an investor
+-- with an approved access request
 create policy aggregates_read on monthly_aggregates for select using (
   is_admin()
   or exists (select 1 from properties p where p.id = property_id and p.owner_id = auth.uid())
-  or exists (select 1 from unlocks u where u.property_id = monthly_aggregates.property_id
-             and u.buyer_id = auth.uid()));
-
--- reservations: owner/admin only. Buyers get NO policy => no access.
-alter table reservations enable row level security;
+  or exists (select 1 from access_requests r where r.property_id = monthly_aggregates.property_id
+             and r.investor_id = auth.uid() and r.status = 'approved'));
 create policy reservations_read on reservations for select using (
   is_admin() or exists (select 1 from properties p where p.id = property_id and p.owner_id = auth.uid()));
-
--- data_submissions (raw file keys, verification internals): admin only
-alter table data_submissions enable row level security;
 create policy submissions_admin on data_submissions for select using (is_admin());
 
--- unlocks / payments / saved_properties: the buyer's own rows
-create policy unlocks_own on unlocks for select using (buyer_id = auth.uid());
-create policy payments_own on payments for select using (buyer_id = auth.uid() or is_admin());
-create policy saved_own on saved_properties for all using (buyer_id = auth.uid());
+-- investor_profiles: the investor, admins, and an owner who holds a request from that investor
+create policy profile_read on investor_profiles for select using (
+  user_id = auth.uid() or is_admin()
+  or exists (select 1 from access_requests r join properties p on p.id = r.property_id
+             where r.investor_id = investor_profiles.user_id and p.owner_id = auth.uid()));
 
--- Writes to unlocks/payments/aggregates/submissions happen only through the server (service role).
+-- access_requests / request_messages: the two parties and admins
+create policy requests_parties on access_requests for select using (
+  investor_id = auth.uid() or is_admin()
+  or exists (select 1 from properties p where p.id = property_id and p.owner_id = auth.uid()));
 ```
 
-Anything not listed has RLS enabled with no policy, i.e. denied (fail closed).
+Writes always go through the server. Anything not listed stays denied.
